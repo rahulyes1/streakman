@@ -17,6 +17,7 @@ const DEFAULT_TASKS = [
     completedToday: false,
     selectedDifficulty: "normal",
     customized: false,
+    freezeProtected: false,
     difficulties: {
       easy: { label: "Light effort", points: 20, customLabel: "10-min walk" },
       normal: { label: "Normal effort", points: 40, customLabel: "30-min workout" },
@@ -32,6 +33,7 @@ const DEFAULT_TASKS = [
     completedToday: false,
     selectedDifficulty: "normal",
     customized: false,
+    freezeProtected: false,
     difficulties: {
       easy: { label: "Light effort", points: 20, customLabel: "4 glasses" },
       normal: { label: "Normal effort", points: 40, customLabel: "8 glasses" },
@@ -47,6 +49,7 @@ const DEFAULT_TASKS = [
     completedToday: false,
     selectedDifficulty: "normal",
     customized: false,
+    freezeProtected: false,
     difficulties: {
       easy: { label: "Light effort", points: 20, customLabel: "5 pages or 10min" },
       normal: { label: "Normal effort", points: 40, customLabel: "30 minutes" },
@@ -62,6 +65,7 @@ const DEFAULT_TASKS = [
     completedToday: false,
     selectedDifficulty: "normal",
     customized: false,
+    freezeProtected: false,
     difficulties: {
       easy: { label: "Light effort", points: 20, customLabel: "3 minutes" },
       normal: { label: "Normal effort", points: 40, customLabel: "10 minutes" },
@@ -77,6 +81,7 @@ const DEFAULT_TASKS = [
     completedToday: false,
     selectedDifficulty: "normal",
     customized: false,
+    freezeProtected: false,
     difficulties: {
       easy: { label: "Light effort", points: 20, customLabel: "5 minutes" },
       normal: { label: "Normal effort", points: 40, customLabel: "15 minutes" },
@@ -217,6 +222,22 @@ export default function Home() {
     setCanSpin(false);
   }
 
+  function handleFreeze(taskId) {
+    if (freezeTokens <= 0) {
+      alert("No freeze tokens available!");
+      return;
+    }
+
+    setTasks(prevTasks => prevTasks.map(task =>
+      task.id === taskId ? { ...task, freezeProtected: true } : task
+    ));
+    setFreezeTokens(prev => prev - 1);
+
+    // Show confirmation
+    setXpPopup("🛡️ Streak Protected!");
+    setTimeout(() => setXpPopup(null), 2000);
+  }
+
   return (
     <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 max-w-6xl mx-auto">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -301,6 +322,7 @@ export default function Home() {
                 task={task}
                 onComplete={handleTaskAction}
                 onCustomize={handleCustomize}
+                onFreeze={handleFreeze}
               />
             ))}
           </div>

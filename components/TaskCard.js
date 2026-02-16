@@ -1,29 +1,47 @@
 "use client";
 
-export default function TaskCard({ task, onComplete, onCustomize }) {
+export default function TaskCard({ task, onComplete, onCustomize, onFreeze }) {
   const difficultyKeys = ['easy', 'normal', 'hard', 'extreme'];
 
   function getDifficultyDisplay(key) {
     const diff = task.difficulties[key];
-    const isCustomized = task.customized && diff.customLabel;
 
-    if (isCustomized) {
+    // If user has customized, show their custom label
+    if (task.customized && diff.customLabel) {
       return {
         mainLabel: diff.customLabel,
         subLabel: null
       };
-    } else {
+    }
+
+    // If smart default exists, show it as the main label
+    if (diff.customLabel) {
       return {
-        mainLabel: diff.label,
-        subLabel: diff.customLabel ? `(e.g., ${diff.customLabel})` : null
+        mainLabel: diff.customLabel,
+        subLabel: null
       };
     }
+
+    // Fall back to generic label
+    return {
+      mainLabel: diff.label,
+      subLabel: null
+    };
   }
 
   function handleComplete() {
     if (task.completedToday) return;
     const points = task.difficulties[task.selectedDifficulty].points;
     onComplete(task.id, points);
+  }
+
+  function getStreakDisplay() {
+    const streak = task.streak;
+    if (streak === 0) return "No streak yet";
+    if (streak >= 30) return `${streak} days 🔥🔥🔥`;
+    if (streak >= 14) return `${streak} days 🔥🔥`;
+    if (streak >= 7) return `${streak} days 🔥`;
+    return `${streak} days`;
   }
 
   return (
@@ -34,7 +52,25 @@ export default function TaskCard({ task, onComplete, onCustomize }) {
           <h2 className="text-lg font-semibold">
             {task.name} {task.emoji}
           </h2>
-          <p className="text-sm text-[#94A3B8] mt-1">Streak: {task.streak} days</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-sm text-[#94A3B8]">
+              Streak: <span className="font-semibold text-[#F1F5F9]">{getStreakDisplay()}</span>
+            </p>
+            {task.streak > 0 && onFreeze && !task.freezeProtected && (
+              <button
+                onClick={() => onFreeze(task.id)}
+                className="text-xs bg-[#60A5FA]/20 text-[#60A5FA] px-2 py-1 rounded-md hover:bg-[#60A5FA]/30 transition-colors"
+                title="Use freeze token to protect streak"
+              >
+                💎 Freeze
+              </button>
+            )}
+            {task.freezeProtected && (
+              <span className="text-xs bg-[#34D399]/20 text-[#34D399] px-2 py-1 rounded-md">
+                🛡️ Protected
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Customize Button */}
@@ -45,7 +81,7 @@ export default function TaskCard({ task, onComplete, onCustomize }) {
         >
           <span className="text-lg">⚙️</span>
           {/* Tooltip */}
-          <span className="absolute right-0 top-8 bg-[#0F172A] text-xs text-[#94A3B8] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-[#334155]">
+          <span className="absolute right-0 top-8 bg-[#0F172A] text-xs text-[#94A3B8] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-[#334155] z-10">
             Customize difficulty levels
           </span>
         </button>
@@ -54,7 +90,7 @@ export default function TaskCard({ task, onComplete, onCustomize }) {
       {task.completedToday ? (
         /* Completed State */
         <div className="mt-4 bg-[#34D399] text-white py-3 px-4 rounded-xl font-semibold text-center">
-          ✅ Completed! {task.difficulties[task.selectedDifficulty].label} (+
+          ✅ Completed! {getDifficultyDisplay(task.selectedDifficulty).mainLabel} (+
           {task.difficulties[task.selectedDifficulty].points}pts)
         </div>
       ) : (
@@ -80,11 +116,6 @@ export default function TaskCard({ task, onComplete, onCustomize }) {
                   <div className={`text-xs mt-1 ${isSelected ? "text-white/90" : "text-[#64748B]"}`}>
                     {display.mainLabel}
                   </div>
-                  {display.subLabel && (
-                    <div className={`text-xs mt-0.5 ${isSelected ? "text-white/70" : "text-[#475569]"}`}>
-                      {display.subLabel}
-                    </div>
-                  )}
                   <div className={`text-xs font-semibold mt-1 ${isSelected ? "text-white" : "text-[#60A5FA]"}`}>
                     {diff.points} pts
                   </div>
