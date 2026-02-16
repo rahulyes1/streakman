@@ -17,3 +17,16 @@ body {
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-in-out;
 }
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(1080deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 2s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
