@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import BottomNav from "@/components/BottomNav";
 
 // Mock data for 21 days (3 weeks)
 const MOMENTUM_DATA = [
@@ -67,8 +68,9 @@ export default function Progress() {
   const gradeInfo = getGrade(weekStats.avgScore);
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6">
-      <div className="max-w-4xl mx-auto">
+    <>
+      <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 pb-24">
+        <div className="max-w-4xl mx-auto">
         {/* Header */}
         <h1 className="text-3xl font-bold mb-6">Progress 📊</h1>
 
@@ -210,5 +212,8 @@ export default function Progress() {
         </div>
       </div>
     </div>
+
+      <BottomNav />
+    </>
   );
 }

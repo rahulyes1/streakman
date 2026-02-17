@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import IntensitySlider from "@/components/IntensitySlider";
+import BottomNav from "@/components/BottomNav";
 
 const PRESETS = {
   chill: {
@@ -98,8 +99,9 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6">
-      <div className="max-w-4xl mx-auto">
+    <>
+      <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 pb-24">
+        <div className="max-w-4xl mx-auto">
         {/* Header */}
         <h1 className="text-3xl font-bold mb-6">Settings ⚙️</h1>
 
@@ -213,5 +215,8 @@ export default function Settings() {
         </div>
       </div>
     </div>
+
+      <BottomNav />
+    </>
   );
 }
