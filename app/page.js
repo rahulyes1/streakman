@@ -17,6 +17,15 @@ export default function Home() {
   const [freezeTokens, setFreezeTokens] = useState(0);
   const router = useRouter();
 
+  // Redirect to tasks page on initial load
+  useEffect(() => {
+    const hasVisitedHome = sessionStorage.getItem('visited_home');
+    if (!hasVisitedHome) {
+      sessionStorage.setItem('visited_home', 'true');
+      router.push('/tasks');
+    }
+  }, [router]);
+
   // Load tasks from localStorage
   useEffect(() => {
     const loadTasks = () => {
@@ -138,8 +147,28 @@ export default function Home() {
           </div>
 
           {/* Motivational Message */}
-          <div className="bg-gradient-to-r from-[#60A5FA]/10 to-[#34D399]/10 border border-[#60A5FA]/30 rounded-2xl p-6 text-center mb-8">
+          <div className="bg-gradient-to-r from-[#60A5FA]/10 to-[#34D399]/10 border border-[#60A5FA]/30 rounded-2xl p-6 text-center mb-6">
             <p className="text-lg font-medium">{getMotivation()}</p>
+          </div>
+
+          {/* Quick Stats Widgets */}
+          <div className="grid grid-cols-2 gap-3 mb-8">
+            <div className="bg-[#1E293B] rounded-xl border border-[#334155] p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-[#94A3B8]">Active Tasks</span>
+                <span className="text-2xl">📝</span>
+              </div>
+              <p className="text-3xl font-bold">{tasks.length}</p>
+              <p className="text-xs text-[#64748B] mt-1">Total tasks tracked</p>
+            </div>
+            <div className="bg-[#1E293B] rounded-xl border border-[#334155] p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-[#94A3B8]">Completed</span>
+                <span className="text-2xl">✅</span>
+              </div>
+              <p className="text-3xl font-bold">{completedToday}</p>
+              <p className="text-xs text-[#64748B] mt-1">Tasks done today</p>
+            </div>
           </div>
 
           {/* Daily Spin */}

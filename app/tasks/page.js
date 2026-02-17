@@ -65,7 +65,13 @@ function TasksContent() {
   const [tasks, setTasks] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newTask, setNewTask] = useState({ name: "", emoji: "📝" });
+  const [newTask, setNewTask] = useState({
+    name: "",
+    emoji: "📝",
+    goalType: "none", // none, amount, time, intensity
+    goalValue: "",
+    goalUnit: ""
+  });
   const [freezeTokens, setFreezeTokens] = useState(0);
 
   // Load tasks
@@ -128,10 +134,13 @@ function TasksContent() {
       lastCompletedDate: null,
       completionHistory: Array(7).fill(false),
       freezeProtected: false,
+      goalType: newTask.goalType,
+      goalValue: newTask.goalValue,
+      goalUnit: newTask.goalUnit,
     };
 
     saveTasks([...tasks, task]);
-    setNewTask({ name: "", emoji: "📝" });
+    setNewTask({ name: "", emoji: "📝", goalType: "none", goalValue: "", goalUnit: "" });
     setShowAddModal(false);
   };
 
@@ -291,6 +300,7 @@ function TasksContent() {
                         key={task.id}
                         task={task}
                         onTogglePin={togglePin}
+                        onComplete={completeTask}
                         onClick={() => setSelectedTask(task)}
                       />
                     ))}
@@ -310,6 +320,7 @@ function TasksContent() {
                         key={task.id}
                         task={task}
                         onTogglePin={togglePin}
+                        onComplete={completeTask}
                         onClick={() => setSelectedTask(task)}
                       />
                     ))}
@@ -545,13 +556,84 @@ function TasksContent() {
                   autoFocus
                 />
               </div>
+
+              {/* Goal Tracking */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Goal (Optional)</label>
+                <select
+                  value={newTask.goalType}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, goalType: e.target.value, goalValue: "", goalUnit: "" })
+                  }
+                  className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 mb-2"
+                >
+                  <option value="none">No Goal</option>
+                  <option value="amount">Amount (e.g., 10 pages, 5 reps)</option>
+                  <option value="time">Time (e.g., 30 minutes)</option>
+                  <option value="intensity">Intensity Level</option>
+                </select>
+
+                {newTask.goalType === "amount" && (
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={newTask.goalValue}
+                      onChange={(e) => setNewTask({ ...newTask, goalValue: e.target.value })}
+                      placeholder="10"
+                      className="flex-1 bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
+                    />
+                    <input
+                      type="text"
+                      value={newTask.goalUnit}
+                      onChange={(e) => setNewTask({ ...newTask, goalUnit: e.target.value })}
+                      placeholder="pages"
+                      className="flex-1 bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
+                    />
+                  </div>
+                )}
+
+                {newTask.goalType === "time" && (
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={newTask.goalValue}
+                      onChange={(e) => setNewTask({ ...newTask, goalValue: e.target.value })}
+                      placeholder="30"
+                      className="flex-1 bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
+                    />
+                    <select
+                      value={newTask.goalUnit}
+                      onChange={(e) => setNewTask({ ...newTask, goalUnit: e.target.value })}
+                      className="flex-1 bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
+                    >
+                      <option value="">Unit</option>
+                      <option value="minutes">Minutes</option>
+                      <option value="hours">Hours</option>
+                    </select>
+                  </div>
+                )}
+
+                {newTask.goalType === "intensity" && (
+                  <select
+                    value={newTask.goalValue}
+                    onChange={(e) => setNewTask({ ...newTask, goalValue: e.target.value, goalUnit: "" })}
+                    className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
+                  >
+                    <option value="">Select Intensity</option>
+                    <option value="Light">Light</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Intense">Intense</option>
+                    <option value="Maximum">Maximum</option>
+                  </select>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => {
                   setShowAddModal(false);
-                  setNewTask({ name: "", emoji: "📝" });
+                  setNewTask({ name: "", emoji: "📝", goalType: "none", goalValue: "", goalUnit: "" });
                 }}
                 className="flex-1 py-3 rounded-xl font-semibold bg-[#0F172A] text-[#94A3B8] hover:border-[#60A5FA] border border-[#334155] transition-colors"
               >
@@ -587,11 +669,10 @@ export default function TasksPage() {
 }
 
 // Task Row Component
-function TaskRow({ task, onTogglePin, onClick }) {
+function TaskRow({ task, onTogglePin, onComplete, onClick }) {
   return (
     <div
-      onClick={onClick}
-      className={`bg-[#1E293B] rounded-xl border p-4 cursor-pointer transition-all hover:border-[#60A5FA]/50 ${
+      className={`bg-[#1E293B] rounded-xl border p-4 transition-all ${
         task.completedToday
           ? "border-[#34D399] shadow-lg shadow-[#34D399]/20"
           : "border-[#334155]"
@@ -600,7 +681,7 @@ function TaskRow({ task, onTogglePin, onClick }) {
       <div className="flex items-center gap-3">
         <span className="text-3xl">{task.emoji}</span>
 
-        <div className="flex-1">
+        <div className="flex-1 cursor-pointer" onClick={onClick}>
           <div className="flex items-center gap-2">
             <h3 className="font-semibold">{task.name}</h3>
             {task.freezeProtected && (
@@ -609,10 +690,33 @@ function TaskRow({ task, onTogglePin, onClick }) {
               </span>
             )}
           </div>
-          <p className="text-sm text-[#94A3B8]">
-            🔥 {task.streak} {task.streak === 1 ? "day" : "days"}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-[#94A3B8]">
+              🔥 {task.streak} {task.streak === 1 ? "day" : "days"}
+            </p>
+            {task.goalType && task.goalType !== "none" && (
+              <span className="text-xs text-[#60A5FA]">
+                • Goal: {task.goalValue} {task.goalUnit || task.goalValue}
+              </span>
+            )}
+          </div>
         </div>
+
+        {!task.completedToday ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onComplete(task.id);
+            }}
+            className="px-4 py-2 rounded-lg font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-colors text-sm"
+          >
+            ✓ Done
+          </button>
+        ) : (
+          <div className="px-4 py-2 rounded-lg font-semibold bg-[#34D399] text-white text-sm">
+            ✅ Done
+          </div>
+        )}
 
         <button
           onClick={(e) => {
