@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,7 +12,7 @@ const NAV_ITEMS = [
   { href: "/settings", icon: "⚙️", label: "Settings" },
 ];
 
-export default function BottomNav() {
+function BottomNavContent() {
   const pathname = usePathname();
 
   return (
@@ -37,5 +38,15 @@ export default function BottomNav() {
         })}
       </div>
     </nav>
+  );
+}
+
+export default function BottomNav() {
+  return (
+    <Suspense fallback={
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#1E293B] border-t border-[#334155] z-40 h-[70px]" />
+    }>
+      <BottomNavContent />
+    </Suspense>
   );
 }

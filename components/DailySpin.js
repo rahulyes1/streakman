@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const REWARDS = [
   { type: "xp", value: 25, weight: 80, label: "+25 XP", emoji: "✨" },
@@ -9,9 +9,22 @@ const REWARDS = [
   { type: "token", value: 1, weight: 1, label: "💎 Freeze Token", emoji: "💎" },
 ];
 
-export default function DailySpin({ canSpin, onSpin }) {
+export default function DailySpin() {
+  const [canSpin, setCanSpin] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
   const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    // Check if user can spin today
+    const lastSpinDate = localStorage.getItem("streakman_last_spin");
+    const today = new Date().toDateString();
+
+    if (lastSpinDate !== today) {
+      setCanSpin(true);
+    } else {
+      setCanSpin(false);
+    }
+  }, []);
 
   function getRandomReward() {
     const totalWeight = REWARDS.reduce((sum, r) => sum + r.weight, 0);
@@ -38,7 +51,21 @@ export default function DailySpin({ canSpin, onSpin }) {
       const reward = getRandomReward();
       setResult(reward);
       setIsSpinning(false);
-      onSpin(reward);
+
+      // Save last spin date
+      localStorage.setItem("streakman_last_spin", new Date().toDateString());
+      setCanSpin(false);
+
+      // Apply reward
+      if (reward.type === "xp") {
+        const currentXP = parseInt(localStorage.getItem("streakman_xp") || "0");
+        localStorage.setItem("streakman_xp", (currentXP + reward.value).toString());
+        window.dispatchEvent(new Event("xpUpdated"));
+      } else if (reward.type === "token") {
+        const currentTokens = parseInt(localStorage.getItem("streakman_freeze_tokens") || "0");
+        localStorage.setItem("streakman_freeze_tokens", (currentTokens + reward.value).toString());
+        window.dispatchEvent(new Event("tokensUpdated"));
+      }
     }, 2000);
   }
 
@@ -55,7 +82,7 @@ export default function DailySpin({ canSpin, onSpin }) {
       <div className="flex justify-center mb-4">
         <div
           className={`w-24 h-24 rounded-full bg-gradient-to-br from-[#60A5FA] to-[#34D399] flex items-center justify-center text-4xl ${
-            isSpinning ? 'animate-spin-slow' : ''
+            isSpinning ? 'animate-spin' : ''
           }`}
         >
           {isSpinning ? '🎰' : '🎁'}
@@ -64,7 +91,7 @@ export default function DailySpin({ canSpin, onSpin }) {
 
       {/* Result Display */}
       {result && (
-        <div className="bg-[#34D399]/10 border border-[#34D399]/30 rounded-xl p-3 mb-4 text-center animate-fadeIn">
+        <div className="bg-[#34D399]/10 border border-[#34D399]/30 rounded-xl p-3 mb-4 text-center">
           <p className="text-2xl mb-2">{result.emoji}</p>
           <p className="text-sm font-semibold text-[#34D399]">
             You won {result.label}!

@@ -3,12 +3,18 @@
 import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
 import FloatingAddButton from "@/components/FloatingAddButton";
+import BadgeDisplay from "@/components/BadgeDisplay";
+import DailySpin from "@/components/DailySpin";
+import LevelUpNotification from "@/components/LevelUpNotification";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [tasks, setTasks] = useState([]);
   const [totalScore, setTotalScore] = useState(0);
   const [totalXP, setTotalXP] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [freezeTokens, setFreezeTokens] = useState(0);
   const router = useRouter();
 
   // Load tasks from localStorage
@@ -38,12 +44,46 @@ export default function Home() {
     setTotalScore(score);
   }, [completedToday]);
 
-  // Load XP from localStorage
+  // Load XP and calculate level
   useEffect(() => {
-    const saved = localStorage.getItem('streakman_xp');
-    if (saved) {
-      setTotalXP(parseInt(saved));
-    }
+    const loadXP = () => {
+      const saved = localStorage.getItem('streakman_xp');
+      if (saved) {
+        const xp = parseInt(saved);
+        setTotalXP(xp);
+
+        // Calculate level (every 100 XP = 1 level)
+        const newLevel = Math.floor(xp / 100) + 1;
+        const oldLevel = level;
+
+        if (newLevel > oldLevel) {
+          setLevel(newLevel);
+          setShowLevelUp(newLevel);
+        } else {
+          setLevel(newLevel);
+        }
+      }
+    };
+
+    loadXP();
+
+    const handleUpdate = () => loadXP();
+    window.addEventListener('xpUpdated', handleUpdate);
+    return () => window.removeEventListener('xpUpdated', handleUpdate);
+  }, [level]);
+
+  // Load freeze tokens
+  useEffect(() => {
+    const loadTokens = () => {
+      const tokens = parseInt(localStorage.getItem('streakman_freeze_tokens') || '0');
+      setFreezeTokens(tokens);
+    };
+
+    loadTokens();
+
+    const handleUpdate = () => loadTokens();
+    window.addEventListener('tokensUpdated', handleUpdate);
+    return () => window.removeEventListener('tokensUpdated', handleUpdate);
   }, []);
 
   const getGreeting = () => {
@@ -74,37 +114,54 @@ export default function Home() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-3 gap-3 mb-8">
-            <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-4 text-center">
-              <p className="text-xs text-[#94A3B8] mb-2">Current Streak</p>
-              <p className="text-3xl font-bold">{currentStreak}</p>
-              <p className="text-sm text-[#94A3B8] mt-1">days 🔥</p>
+          <div className="grid grid-cols-4 gap-2 mb-8">
+            <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-3 text-center">
+              <p className="text-xs text-[#94A3B8] mb-1">Streak</p>
+              <p className="text-2xl font-bold">{currentStreak}</p>
+              <p className="text-xs text-[#94A3B8]">🔥</p>
             </div>
-            <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-4 text-center">
-              <p className="text-xs text-[#94A3B8] mb-2">Today's Score</p>
-              <p className="text-3xl font-bold">{totalScore}</p>
-              <p className="text-sm text-[#94A3B8] mt-1">/100</p>
+            <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-3 text-center">
+              <p className="text-xs text-[#94A3B8] mb-1">Score</p>
+              <p className="text-2xl font-bold">{totalScore}</p>
+              <p className="text-xs text-[#94A3B8]">/100</p>
             </div>
-            <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-4 text-center">
-              <p className="text-xs text-[#94A3B8] mb-2">Total XP</p>
-              <p className="text-3xl font-bold">{totalXP}</p>
+            <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-3 text-center">
+              <p className="text-xs text-[#94A3B8] mb-1">Level</p>
+              <p className="text-2xl font-bold">{level}</p>
+              <p className="text-xs text-[#94A3B8]">⭐</p>
+            </div>
+            <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-3 text-center">
+              <p className="text-xs text-[#94A3B8] mb-1">Tokens</p>
+              <p className="text-2xl font-bold">{freezeTokens}</p>
+              <p className="text-xs text-[#94A3B8]">💎</p>
             </div>
           </div>
 
           {/* Motivational Message */}
-          <div className="bg-gradient-to-r from-[#60A5FA]/10 to-[#34D399]/10 border border-[#60A5FA]/30 rounded-2xl p-6 text-center">
+          <div className="bg-gradient-to-r from-[#60A5FA]/10 to-[#34D399]/10 border border-[#60A5FA]/30 rounded-2xl p-6 text-center mb-8">
             <p className="text-lg font-medium">{getMotivation()}</p>
           </div>
 
-          {/* Empty Space with Subtle Pattern */}
-          <div className="mt-12 text-center">
-            <div className="opacity-20">
-              <div className="text-6xl mb-4">📝</div>
-              <p className="text-[#94A3B8]">Track your streaks in the Tasks tab</p>
-            </div>
+          {/* Daily Spin */}
+          <div className="mb-8">
+            <DailySpin />
+          </div>
+
+          {/* Badges Section */}
+          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-5">
+            <h3 className="text-lg font-semibold mb-3">Recent Badges</h3>
+            <BadgeDisplay compact={true} />
           </div>
         </div>
       </div>
+
+      {/* Level Up Notification */}
+      {showLevelUp && (
+        <LevelUpNotification
+          level={showLevelUp}
+          onClose={() => setShowLevelUp(false)}
+        />
+      )}
 
       <FloatingAddButton onClick={() => router.push('/tasks?add=true')} />
       <BottomNav />
