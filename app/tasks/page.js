@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import FloatingAddButton from "@/components/FloatingAddButton";
+import { initializeDailyReset } from "@/lib/dailyReset";
 
 const PREMADE_TASKS = [
   // Morning Routine
@@ -73,6 +74,11 @@ function TasksContent() {
     goalUnit: ""
   });
   const [freezeTokens, setFreezeTokens] = useState(0);
+
+  // Initialize daily reset system
+  useEffect(() => {
+    initializeDailyReset();
+  }, []);
 
   // Load tasks
   useEffect(() => {

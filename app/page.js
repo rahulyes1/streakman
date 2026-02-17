@@ -8,6 +8,7 @@ import DailySpin from "@/components/DailySpin";
 import LevelUpNotification from "@/components/LevelUpNotification";
 import { useRouter } from "next/navigation";
 import { calculateScore } from "@/lib/scoring";
+import { initializeDailyReset } from "@/lib/dailyReset";
 
 export default function Home() {
   const [tasks, setTasks] = useState([]);
@@ -29,6 +30,11 @@ export default function Home() {
       router.push('/tasks');
     }
   }, [router]);
+
+  // Initialize daily reset system
+  useEffect(() => {
+    initializeDailyReset();
+  }, []);
 
   // Load tasks from localStorage
   useEffect(() => {

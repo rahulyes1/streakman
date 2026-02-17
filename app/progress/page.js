@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
 import ProgressBar from "@/components/ProgressBar";
 import { calculateScore } from "@/lib/scoring";
+import { initializeDailyReset } from "@/lib/dailyReset";
 
 // Mock data for 21 days (3 weeks)
 const MOMENTUM_DATA = [
@@ -63,6 +64,11 @@ export default function Progress() {
     grade: 'Needs Work',
   });
   const [firstUseDate, setFirstUseDate] = useState(null);
+
+  // Initialize daily reset system
+  useEffect(() => {
+    initializeDailyReset();
+  }, []);
 
   // Initialize first use date
   useEffect(() => {
