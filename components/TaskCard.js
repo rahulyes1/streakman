@@ -29,8 +29,7 @@ export default function TaskCard({ task, onComplete, onCustomize, onFreeze, onDe
   }
 
   function handleComplete() {
-    if (task.completedToday) return;
-
+    // Allow toggling - no longer block if completedToday
     if (minimalMode) {
       // In minimal mode, award fixed 50 XP
       onComplete(task.id, 50);
@@ -103,10 +102,13 @@ export default function TaskCard({ task, onComplete, onCustomize, onFreeze, onDe
       </div>
 
       {task.completedToday ? (
-        /* Completed State - Compact */}
-        <div className="bg-[#34D399] text-white py-2 px-3 rounded-lg font-semibold text-sm text-center">
-          ✅ Completed! {minimalMode ? '+50 XP' : `+${task.difficulties[task.selectedDifficulty].points} XP`}
-        </div>
+        /* Completed State - Can toggle back */}
+        <button
+          onClick={handleComplete}
+          className="w-full py-2 px-3 rounded-lg font-semibold text-sm bg-[#34D399] text-white hover:bg-[#10B981] transition-spring hover:scale-105 active:scale-95"
+        >
+          ✅ Mark as not done
+        </button>
       ) : minimalMode ? (
         /* Minimal Mode - Just Complete Button */}
         <button

@@ -105,6 +105,16 @@ function TasksContent() {
     return () => window.removeEventListener('tokensUpdated', handleUpdate);
   }, []);
 
+  // Sync selectedTask with tasks array when tasks change
+  useEffect(() => {
+    if (selectedTask) {
+      const updatedTask = tasks.find(t => t.id === selectedTask.id);
+      if (updatedTask) {
+        setSelectedTask(updatedTask);
+      }
+    }
+  }, [tasks]);
+
   // Check if should open add modal from URL
   useEffect(() => {
     if (searchParams.get('add') === 'true') {
@@ -163,33 +173,62 @@ function TasksContent() {
   // Complete task
   const completeTask = (taskId) => {
     const updated = tasks.map(task => {
-      if (task.id !== taskId || task.completedToday) return task;
+      if (task.id !== taskId) return task;
 
-      const newStreak = task.streak + 1;
-      const newBestStreak = Math.max(newStreak, task.bestStreak);
+      // Toggle completion
+      if (task.completedToday) {
+        // Uncomplete the task
+        const newStreak = Math.max(0, task.streak - 1);
 
-      // Update XP
-      const currentXP = parseInt(localStorage.getItem('streakman_xp') || '0');
-      localStorage.setItem('streakman_xp', (currentXP + 40).toString());
-      window.dispatchEvent(new Event('xpUpdated'));
+        // Restore XP
+        const currentXP = parseInt(localStorage.getItem('streakman_xp') || '0');
+        localStorage.setItem('streakman_xp', Math.max(0, currentXP - 40).toString());
+        window.dispatchEvent(new Event('xpUpdated'));
 
-      // Update total completions
-      const totalCompletions = parseInt(localStorage.getItem('streakman_total_completions') || '0');
-      localStorage.setItem('streakman_total_completions', (totalCompletions + 1).toString());
+        // Update total completions
+        const totalCompletions = parseInt(localStorage.getItem('streakman_total_completions') || '0');
+        localStorage.setItem('streakman_total_completions', Math.max(0, totalCompletions - 1).toString());
 
-      // Update completion history
-      const history = [...task.completionHistory];
-      history.shift();
-      history.push(true);
+        // Update completion history
+        const history = [...task.completionHistory];
+        history.pop();
+        history.unshift(false);
 
-      return {
-        ...task,
-        completedToday: true,
-        streak: newStreak,
-        bestStreak: newBestStreak,
-        lastCompletedDate: new Date().toDateString(),
-        completionHistory: history,
-      };
+        return {
+          ...task,
+          completedToday: false,
+          streak: newStreak,
+          lastCompletedDate: null,
+          completionHistory: history,
+        };
+      } else {
+        // Complete the task
+        const newStreak = task.streak + 1;
+        const newBestStreak = Math.max(newStreak, task.bestStreak);
+
+        // Update XP
+        const currentXP = parseInt(localStorage.getItem('streakman_xp') || '0');
+        localStorage.setItem('streakman_xp', (currentXP + 40).toString());
+        window.dispatchEvent(new Event('xpUpdated'));
+
+        // Update total completions
+        const totalCompletions = parseInt(localStorage.getItem('streakman_total_completions') || '0');
+        localStorage.setItem('streakman_total_completions', (totalCompletions + 1).toString());
+
+        // Update completion history
+        const history = [...task.completionHistory];
+        history.shift();
+        history.push(true);
+
+        return {
+          ...task,
+          completedToday: true,
+          streak: newStreak,
+          bestStreak: newBestStreak,
+          lastCompletedDate: new Date().toDateString(),
+          completionHistory: history,
+        };
+      }
     });
 
     saveTasks(updated);
@@ -266,15 +305,6 @@ function TasksContent() {
     <>
       <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 pb-24">
         <div className="max-w-2xl mx-auto">
-          {/* Settings Button - Top Right */}
-          <a
-            href="/settings"
-            className="fixed top-4 right-4 z-50 bg-[#1E293B] border border-[#334155] rounded-lg p-2 hover:bg-[#334155] transition-spring hover:scale-110 active:scale-95 shadow-lg animate-scaleIn"
-            title="Settings"
-          >
-            <span className="text-lg">⚙️</span>
-          </a>
-
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold">My Streaks</h1>
@@ -396,25 +426,16 @@ function TasksContent() {
 
             {/* Actions */}
             <div className="p-6 space-y-3">
-              {!selectedTask.completedToday ? (
-                <button
-                  onClick={() => {
-                    completeTask(selectedTask.id);
-                    setSelectedTask({
-                      ...selectedTask,
-                      completedToday: true,
-                      streak: selectedTask.streak + 1,
-                    });
-                  }}
-                  className="w-full py-3 rounded-xl font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-spring hover:scale-105 active:scale-95"
-                >
-                  Tap and can be done
-                </button>
-              ) : (
-                <div className="w-full py-3 rounded-xl font-semibold bg-[#34D399] text-white text-center">
-                  ✅ Completed!
-                </div>
-              )}
+              <button
+                onClick={() => completeTask(selectedTask.id)}
+                className={`w-full py-3 rounded-xl font-semibold transition-spring hover:scale-105 active:scale-95 ${
+                  selectedTask.completedToday
+                    ? "bg-[#34D399] text-white hover:bg-[#10B981]"
+                    : "bg-[#60A5FA] text-white hover:bg-[#3B82F6]"
+                }`}
+              >
+                {selectedTask.completedToday ? "✅ Mark as not done" : "Tap and can be done"}
+              </button>
 
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -711,21 +732,19 @@ function TaskRow({ task, onTogglePin, onComplete, onClick }) {
           </div>
         </div>
 
-        {!task.completedToday ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onComplete(task.id);
-            }}
-            className="px-4 py-2 rounded-lg font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-spring hover:scale-105 active:scale-95 text-sm"
-          >
-            ✓ Done
-          </button>
-        ) : (
-          <div className="px-4 py-2 rounded-lg font-semibold bg-[#34D399] text-white text-sm">
-            ✅ Done
-          </div>
-        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onComplete(task.id);
+          }}
+          className={`px-4 py-2 rounded-lg font-semibold transition-spring hover:scale-105 active:scale-95 text-sm ${
+            task.completedToday
+              ? "bg-[#34D399] text-white hover:bg-[#10B981]"
+              : "bg-[#60A5FA] text-white hover:bg-[#3B82F6]"
+          }`}
+        >
+          {task.completedToday ? "✅ Done" : "✓ Done"}
+        </button>
 
         <button
           onClick={(e) => {

@@ -175,15 +175,6 @@ export default function Home() {
     <>
       <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 pb-24">
         <div className="max-w-2xl mx-auto">
-          {/* Settings Button - Top Right */}
-          <button
-            onClick={() => router.push('/settings')}
-            className="fixed top-4 right-4 z-50 bg-[#1E293B] border border-[#334155] rounded-lg p-2 hover:bg-[#334155] transition-spring hover:scale-110 active:scale-95 shadow-lg animate-scaleIn"
-            title="Settings"
-          >
-            <span className="text-lg">⚙️</span>
-          </button>
-
           {/* Header */}
           <div className="mb-8 text-center">
             <h1 className="text-4xl font-bold mb-2">Streak Manager 🔥</h1>

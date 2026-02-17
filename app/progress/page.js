@@ -193,15 +193,6 @@ export default function Progress() {
     <>
       <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 pb-24">
         <div className="max-w-4xl mx-auto">
-        {/* Settings Button - Top Right */}
-        <a
-          href="/settings"
-          className="fixed top-4 right-4 z-50 bg-[#1E293B] border border-[#334155] rounded-lg p-2 hover:bg-[#334155] transition-spring hover:scale-110 active:scale-95 shadow-lg animate-scaleIn"
-          title="Settings"
-        >
-          <span className="text-lg">⚙️</span>
-        </a>
-
         {/* Header */}
         <h1 className="text-3xl font-bold mb-6">Progress 📊</h1>
 
