@@ -64,6 +64,7 @@ export default function Settings() {
     reminders: 2,
   });
   const [activePreset, setActivePreset] = useState("balanced");
+  const [minimalMode, setMinimalMode] = useState(false);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -71,12 +72,20 @@ export default function Settings() {
     if (saved) {
       setIntensities(JSON.parse(saved));
     }
+    const savedMinimal = localStorage.getItem("minimalMode");
+    if (savedMinimal) {
+      setMinimalMode(JSON.parse(savedMinimal));
+    }
   }, []);
 
   // Save to localStorage when changed
   useEffect(() => {
     localStorage.setItem("gamificationIntensities", JSON.stringify(intensities));
   }, [intensities]);
+
+  useEffect(() => {
+    localStorage.setItem("minimalMode", JSON.stringify(minimalMode));
+  }, [minimalMode]);
 
   function handleSliderChange(id, value) {
     setIntensities(prev => ({ ...prev, [id]: value }));
@@ -170,8 +179,31 @@ export default function Settings() {
 
         {/* Appearance Section */}
         <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-2">Appearance</h2>
-          <p className="text-[#94A3B8]">Coming soon...</p>
+          <h2 className="text-xl font-semibold mb-4">Appearance</h2>
+
+          {/* Minimal Mode Toggle */}
+          <div className="bg-[#0F172A] rounded-xl p-4 border border-[#334155]">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="font-semibold mb-1">🎯 Minimal Mode</h3>
+                <p className="text-sm text-[#94A3B8]">
+                  Simplified interface with no difficulty levels. Just track and complete tasks with one tap.
+                </p>
+              </div>
+              <button
+                onClick={() => setMinimalMode(!minimalMode)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  minimalMode ? "bg-[#60A5FA]" : "bg-[#334155]"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    minimalMode ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Account Section */}

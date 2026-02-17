@@ -238,6 +238,12 @@ export default function Home() {
     setTimeout(() => setXpPopup(null), 2000);
   }
 
+  function handleDelete(taskId) {
+    if (window.confirm("Remove this task? Your streak progress will be lost.")) {
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 max-w-6xl mx-auto">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -323,6 +329,7 @@ export default function Home() {
                 onComplete={handleTaskAction}
                 onCustomize={handleCustomize}
                 onFreeze={handleFreeze}
+                onDelete={handleDelete}
               />
             ))}
           </div>
