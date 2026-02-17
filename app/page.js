@@ -7,10 +7,12 @@ import BadgeDisplay from "@/components/BadgeDisplay";
 import DailySpin from "@/components/DailySpin";
 import LevelUpNotification from "@/components/LevelUpNotification";
 import { useRouter } from "next/navigation";
+import { calculateScore } from "@/lib/scoring";
 
 export default function Home() {
   const [tasks, setTasks] = useState([]);
   const [totalScore, setTotalScore] = useState(0);
+  const [grade, setGrade] = useState('');
   const [totalXP, setTotalXP] = useState(0);
   const [level, setLevel] = useState(1);
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -47,11 +49,17 @@ export default function Home() {
   const completedToday = tasks.filter(t => t.completedToday).length;
   const currentStreak = Math.max(...tasks.map(t => t.streak), 0);
 
-  // Calculate today's score
+  // Calculate real score using algorithm
   useEffect(() => {
-    const score = completedToday * 40;
-    setTotalScore(score);
-  }, [completedToday]);
+    if (tasks.length > 0) {
+      const result = calculateScore(tasks);
+      setTotalScore(result.totalScore);
+      setGrade(result.grade);
+    } else {
+      setTotalScore(0);
+      setGrade('');
+    }
+  }, [tasks]);
 
   // Load XP and calculate level
   useEffect(() => {

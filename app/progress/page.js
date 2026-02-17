@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
+import ProgressBar from "@/components/ProgressBar";
+import { calculateScore } from "@/lib/scoring";
 
 // Mock data for 21 days (3 weeks)
 const MOMENTUM_DATA = [
@@ -49,6 +51,36 @@ const PROGRESS_BARS = [
 export default function Progress() {
   const [activeTab, setActiveTab] = useState('overview');
   const [hoveredDay, setHoveredDay] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [scoreData, setScoreData] = useState({
+    totalScore: 0,
+    breakdown: {
+      completionRate: 0,
+      streakStrength: 0,
+      weeklyConsistency: 0,
+      improvementTrend: 0,
+    },
+    grade: 'Needs Work',
+  });
+
+  // Load tasks and calculate score
+  useEffect(() => {
+    const loadTasks = () => {
+      const saved = localStorage.getItem('streakman_tasks');
+      if (saved) {
+        const tasksData = JSON.parse(saved);
+        setTasks(tasksData);
+        const result = calculateScore(tasksData);
+        setScoreData(result);
+      }
+    };
+
+    loadTasks();
+
+    const handleUpdate = () => loadTasks();
+    window.addEventListener('tasksUpdated', handleUpdate);
+    return () => window.removeEventListener('tasksUpdated', handleUpdate);
+  }, []);
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
@@ -57,15 +89,15 @@ export default function Progress() {
     { id: 'vault', label: 'Vault' },
   ];
 
-  function getGrade(score) {
-    if (score >= 90) return { grade: 'A+', color: 'text-[#34D399]' };
-    if (score >= 80) return { grade: 'A-', color: 'text-[#60A5FA]' };
-    if (score >= 70) return { grade: 'B', color: 'text-[#FCD34D]' };
-    return { grade: 'C', color: 'text-[#F59E0B]' };
+  function getGradeColor(grade) {
+    if (grade.startsWith('A')) return 'text-[#34D399]';
+    if (grade.startsWith('B')) return 'text-[#60A5FA]';
+    if (grade.startsWith('C')) return 'text-[#FCD34D]';
+    return 'text-[#F59E0B]';
   }
 
-  const weekStats = { avgScore: 87, daysCompleted: 5, totalDays: 7 };
-  const gradeInfo = getGrade(weekStats.avgScore);
+  const completedToday = tasks.filter(t => t.completedToday).length;
+  const gradeColor = getGradeColor(scoreData.grade);
 
   return (
     <>
@@ -77,18 +109,18 @@ export default function Progress() {
         {/* Current Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-4 text-center">
-            <p className="text-xs text-[#94A3B8] mb-1">Avg Score</p>
-            <p className="text-2xl font-bold">{weekStats.avgScore}</p>
+            <p className="text-xs text-[#94A3B8] mb-1">Total Score</p>
+            <p className="text-2xl font-bold">{scoreData.totalScore}</p>
             <p className="text-xs text-[#94A3B8]">/100</p>
           </div>
           <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-4 text-center">
             <p className="text-xs text-[#94A3B8] mb-1">Grade</p>
-            <p className={`text-2xl font-bold ${gradeInfo.color}`}>{gradeInfo.grade}</p>
+            <p className={`text-2xl font-bold ${gradeColor}`}>{scoreData.grade}</p>
           </div>
           <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-4 text-center">
-            <p className="text-xs text-[#94A3B8] mb-1">This Week</p>
-            <p className="text-2xl font-bold">{weekStats.daysCompleted}</p>
-            <p className="text-xs text-[#94A3B8]">/{weekStats.totalDays} days</p>
+            <p className="text-xs text-[#94A3B8] mb-1">Today</p>
+            <p className="text-2xl font-bold">{completedToday}</p>
+            <p className="text-xs text-[#94A3B8]">/{tasks.length} tasks</p>
           </div>
         </div>
 
@@ -122,25 +154,37 @@ export default function Progress() {
               <div>
                 <h2 className="text-lg font-semibold mb-4">Score Breakdown</h2>
                 <div className="space-y-4">
-                  {PROGRESS_BARS.map((bar) => {
-                    const percentage = Math.round((bar.current / bar.max) * 100);
-                    return (
-                      <div key={bar.label}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-[#F1F5F9]">{bar.label}</span>
-                          <span className="text-sm text-[#94A3B8]">
-                            {bar.current}/{bar.max} ({percentage}%)
-                          </span>
-                        </div>
-                        <div className="w-full bg-[#0F172A] rounded-full h-3 overflow-hidden">
-                          <div
-                            className={`h-full ${bar.color} transition-all duration-500 rounded-full`}
-                            style={{ width: `${percentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <ProgressBar
+                    label="Completion Rate"
+                    value={scoreData.breakdown.completionRate}
+                    max={40}
+                    color="bg-[#34D399]"
+                  />
+                  <ProgressBar
+                    label="Streak Strength"
+                    value={scoreData.breakdown.streakStrength}
+                    max={35}
+                    color="bg-[#60A5FA]"
+                  />
+                  <ProgressBar
+                    label="Weekly Consistency"
+                    value={scoreData.breakdown.weeklyConsistency}
+                    max={15}
+                    color="bg-[#A78BFA]"
+                  />
+                  <ProgressBar
+                    label="Improvement Trend"
+                    value={scoreData.breakdown.improvementTrend}
+                    max={10}
+                    color="bg-[#F59E0B]"
+                  />
+                </div>
+
+                {/* Total Score Display */}
+                <div className="mt-6 p-6 bg-gradient-to-r from-[#60A5FA]/10 to-[#34D399]/10 border border-[#60A5FA]/30 rounded-xl text-center">
+                  <p className="text-sm text-[#94A3B8] mb-2">Overall Score</p>
+                  <p className="text-5xl font-bold mb-2">{scoreData.totalScore}/100</p>
+                  <p className={`text-2xl font-semibold ${gradeColor}`}>{scoreData.grade}</p>
                 </div>
               </div>
 
