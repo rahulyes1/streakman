@@ -13,6 +13,8 @@ export default function Home() {
   const [tasks, setTasks] = useState([]);
   const [totalScore, setTotalScore] = useState(0);
   const [grade, setGrade] = useState('');
+  const [scoreBreakdown, setScoreBreakdown] = useState(null);
+  const [showScoreDetails, setShowScoreDetails] = useState(false);
   const [totalXP, setTotalXP] = useState(0);
   const [level, setLevel] = useState(1);
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -55,9 +57,11 @@ export default function Home() {
       const result = calculateScore(tasks);
       setTotalScore(result.totalScore);
       setGrade(result.grade);
+      setScoreBreakdown(result.breakdown);
     } else {
       setTotalScore(0);
       setGrade('');
+      setScoreBreakdown(null);
     }
   }, [tasks]);
 
@@ -120,10 +124,66 @@ export default function Home() {
     return `${completedToday} tasks completed today. You're crushing it! 🔥`;
   };
 
+  const getImprovementSuggestions = () => {
+    if (!scoreBreakdown) return [];
+    const suggestions = [];
+
+    // Completion Rate (max 40)
+    if (scoreBreakdown.completionRate < 30) {
+      suggestions.push({
+        area: "Daily Consistency",
+        current: scoreBreakdown.completionRate,
+        max: 40,
+        tip: "Complete tasks on more days this week to boost your completion rate"
+      });
+    }
+
+    // Streak Strength (max 35)
+    if (scoreBreakdown.streakStrength < 25) {
+      suggestions.push({
+        area: "Streak Building",
+        current: scoreBreakdown.streakStrength,
+        max: 35,
+        tip: "Build longer streaks by completing tasks consecutively each day"
+      });
+    }
+
+    // Weekly Consistency (max 15)
+    if (scoreBreakdown.weeklyConsistency < 10) {
+      suggestions.push({
+        area: "Weekly Activity",
+        current: scoreBreakdown.weeklyConsistency,
+        max: 15,
+        tip: "Try to be active every day of the week for maximum consistency"
+      });
+    }
+
+    // Improvement Trend (max 10)
+    if (scoreBreakdown.improvementTrend < 7) {
+      suggestions.push({
+        area: "Task Momentum",
+        current: scoreBreakdown.improvementTrend,
+        max: 10,
+        tip: "Keep more tasks active with ongoing streaks to improve your trend"
+      });
+    }
+
+    return suggestions;
+  };
+
   return (
     <>
       <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 pb-24">
         <div className="max-w-2xl mx-auto">
+          {/* Settings Button - Top Right */}
+          <button
+            onClick={() => router.push('/settings')}
+            className="fixed top-4 right-4 z-50 bg-[#1E293B] border border-[#334155] rounded-lg p-2 hover:bg-[#334155] transition-spring hover:scale-110 active:scale-95 shadow-lg animate-scaleIn"
+            title="Settings"
+          >
+            <span className="text-lg">⚙️</span>
+          </button>
+
           {/* Header */}
           <div className="mb-8 text-center">
             <h1 className="text-4xl font-bold mb-2">Streak Manager 🔥</h1>
@@ -137,10 +197,13 @@ export default function Home() {
               <p className="text-2xl font-bold">{currentStreak}</p>
               <p className="text-xs text-[#94A3B8]">🔥</p>
             </div>
-            <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-3 text-center">
+            <div
+              onClick={() => setShowScoreDetails(!showScoreDetails)}
+              className="bg-[#1E293B] rounded-2xl border border-[#334155] p-3 text-center cursor-pointer hover:bg-[#334155] transition-spring hover:scale-105 active:scale-95 hover:shadow-lg"
+            >
               <p className="text-xs text-[#94A3B8] mb-1">Score</p>
               <p className="text-2xl font-bold">{totalScore}</p>
-              <p className="text-xs text-[#94A3B8]">/100</p>
+              <p className="text-xs text-[#94A3B8]">/100 {grade}</p>
             </div>
             <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-3 text-center">
               <p className="text-xs text-[#94A3B8] mb-1">Level</p>
@@ -153,6 +216,94 @@ export default function Home() {
               <p className="text-xs text-[#94A3B8]">💎</p>
             </div>
           </div>
+
+          {/* Score Details Expandable Section */}
+          {showScoreDetails && scoreBreakdown && (
+            <div className="bg-[#1E293B] rounded-2xl border border-[#60A5FA]/50 p-5 mb-8 animate-slideDown shadow-lg shadow-[#60A5FA]/20">
+              <h3 className="text-lg font-semibold mb-4 flex items-center justify-between">
+                <span>Score Breakdown</span>
+                <span className="text-2xl font-bold text-[#60A5FA]">{totalScore}/100</span>
+              </h3>
+
+              <div className="space-y-3 mb-5">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm text-[#94A3B8]">Completion Rate</span>
+                    <span className="text-sm font-semibold">{scoreBreakdown.completionRate}/40</span>
+                  </div>
+                  <div className="w-full bg-[#0F172A] rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-[#60A5FA] to-[#3B82F6] h-2 rounded-full transition-all"
+                      style={{ width: `${(scoreBreakdown.completionRate / 40) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm text-[#94A3B8]">Streak Strength</span>
+                    <span className="text-sm font-semibold">{scoreBreakdown.streakStrength}/35</span>
+                  </div>
+                  <div className="w-full bg-[#0F172A] rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-[#F59E0B] to-[#EF4444] h-2 rounded-full transition-all"
+                      style={{ width: `${(scoreBreakdown.streakStrength / 35) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm text-[#94A3B8]">Weekly Consistency</span>
+                    <span className="text-sm font-semibold">{scoreBreakdown.weeklyConsistency}/15</span>
+                  </div>
+                  <div className="w-full bg-[#0F172A] rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-[#34D399] to-[#10B981] h-2 rounded-full transition-all"
+                      style={{ width: `${(scoreBreakdown.weeklyConsistency / 15) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm text-[#94A3B8]">Improvement Trend</span>
+                    <span className="text-sm font-semibold">{scoreBreakdown.improvementTrend}/10</span>
+                  </div>
+                  <div className="w-full bg-[#0F172A] rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-[#A78BFA] to-[#8B5CF6] h-2 rounded-full transition-all"
+                      style={{ width: `${(scoreBreakdown.improvementTrend / 10) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Improvement Suggestions */}
+              {getImprovementSuggestions().length > 0 && (
+                <div className="border-t border-[#334155] pt-4">
+                  <h4 className="text-sm font-semibold mb-3 text-[#60A5FA]">💡 How to Improve</h4>
+                  <div className="space-y-2">
+                    {getImprovementSuggestions().map((suggestion, idx) => (
+                      <div key={idx} className="bg-[#0F172A] rounded-lg p-3">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-xs font-semibold text-[#F1F5F9]">{suggestion.area}</span>
+                          <span className="text-xs text-[#94A3B8]">{suggestion.current}/{suggestion.max}</span>
+                        </div>
+                        <p className="text-xs text-[#94A3B8]">{suggestion.tip}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {getImprovementSuggestions().length === 0 && (
+                <div className="border-t border-[#334155] pt-4 text-center">
+                  <p className="text-sm text-[#34D399]">🎉 Perfect score! Keep it up!</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Motivational Message */}
           <div className="bg-gradient-to-r from-[#60A5FA]/10 to-[#34D399]/10 border border-[#60A5FA]/30 rounded-2xl p-6 text-center mb-6">

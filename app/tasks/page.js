@@ -266,6 +266,15 @@ function TasksContent() {
     <>
       <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 pb-24">
         <div className="max-w-2xl mx-auto">
+          {/* Settings Button - Top Right */}
+          <a
+            href="/settings"
+            className="fixed top-4 right-4 z-50 bg-[#1E293B] border border-[#334155] rounded-lg p-2 hover:bg-[#334155] transition-spring hover:scale-110 active:scale-95 shadow-lg animate-scaleIn"
+            title="Settings"
+          >
+            <span className="text-lg">⚙️</span>
+          </a>
+
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold">My Streaks</h1>
@@ -334,8 +343,8 @@ function TasksContent() {
 
       {/* Task Detail Modal */}
       {selectedTask && !editingTask && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] w-full max-w-md">
+        <div className="fixed inset-0 glass-effect z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] w-full max-w-md animate-modalSlideUp shadow-2xl">
             {/* Header */}
             <div className="p-6 border-b border-[#334155]">
               <div className="flex items-start justify-between mb-4">
@@ -397,9 +406,9 @@ function TasksContent() {
                       streak: selectedTask.streak + 1,
                     });
                   }}
-                  className="w-full py-3 rounded-xl font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-colors"
+                  className="w-full py-3 rounded-xl font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-spring hover:scale-105 active:scale-95"
                 >
-                  Mark Complete
+                  Tap and can be done
                 </button>
               ) : (
                 <div className="w-full py-3 rounded-xl font-semibold bg-[#34D399] text-white text-center">
@@ -416,10 +425,10 @@ function TasksContent() {
                 </button>
                 <button
                   onClick={() => togglePin(selectedTask.id)}
-                  className={`py-2 rounded-lg font-medium transition-colors ${
+                  className={`py-2 rounded-lg font-medium transition-all hover:scale-105 active:scale-95 ${
                     selectedTask.pinned
-                      ? "bg-[#60A5FA] text-white"
-                      : "bg-[#0F172A] text-[#94A3B8] hover:text-[#F1F5F9]"
+                      ? "bg-[#60A5FA] text-white shadow-[0_0_12px_rgba(96,165,250,0.6)] hover:shadow-[0_0_16px_rgba(96,165,250,0.8)]"
+                      : "bg-[#0F172A] text-[#94A3B8] hover:text-[#F1F5F9] shadow-[0_0_8px_rgba(148,163,184,0.3)] hover:shadow-[0_0_12px_rgba(148,163,184,0.5)]"
                   }`}
                 >
                   📌 {selectedTask.pinned ? "Unpin" : "Pin"}
@@ -450,8 +459,8 @@ function TasksContent() {
 
       {/* Edit Task Modal */}
       {editingTask && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] w-full max-w-md p-6">
+        <div className="fixed inset-0 glass-effect z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] w-full max-w-md p-6 animate-modalSlideUp shadow-2xl">
             <h2 className="text-xl font-bold mb-4">Edit Task</h2>
 
             <div className="space-y-4">
@@ -491,7 +500,7 @@ function TasksContent() {
               </button>
               <button
                 onClick={saveEdit}
-                className="flex-1 py-3 rounded-xl font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-colors"
+                className="flex-1 py-3 rounded-xl font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-spring hover:scale-105 active:scale-95"
               >
                 Save
               </button>
@@ -502,8 +511,8 @@ function TasksContent() {
 
       {/* Add Task Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
-          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] w-full max-w-md p-6 my-8">
+        <div className="fixed inset-0 glass-effect z-50 flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] w-full max-w-md p-6 my-8 animate-modalSlideUp shadow-2xl">
             <h2 className="text-xl font-bold mb-4">New Streak</h2>
 
             {/* Pre-made Tasks Library */}
@@ -641,7 +650,7 @@ function TasksContent() {
               </button>
               <button
                 onClick={handleAddTask}
-                className="flex-1 py-3 rounded-xl font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-colors"
+                className="flex-1 py-3 rounded-xl font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-spring hover:scale-105 active:scale-95"
               >
                 Create
               </button>
@@ -672,10 +681,10 @@ export default function TasksPage() {
 function TaskRow({ task, onTogglePin, onComplete, onClick }) {
   return (
     <div
-      className={`bg-[#1E293B] rounded-xl border p-4 transition-all ${
+      className={`bg-[#1E293B] rounded-xl border p-4 transition-spring hover:scale-[1.02] active:scale-[0.98] ${
         task.completedToday
           ? "border-[#34D399] shadow-lg shadow-[#34D399]/20"
-          : "border-[#334155]"
+          : "border-[#334155] hover:border-[#60A5FA]/30 hover:shadow-md"
       }`}
     >
       <div className="flex items-center gap-3">
@@ -708,7 +717,7 @@ function TaskRow({ task, onTogglePin, onComplete, onClick }) {
               e.stopPropagation();
               onComplete(task.id);
             }}
-            className="px-4 py-2 rounded-lg font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-colors text-sm"
+            className="px-4 py-2 rounded-lg font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-spring hover:scale-105 active:scale-95 text-sm"
           >
             ✓ Done
           </button>
@@ -723,9 +732,12 @@ function TaskRow({ task, onTogglePin, onComplete, onClick }) {
             e.stopPropagation();
             onTogglePin(task.id);
           }}
-          className={`text-xl transition-colors ${
-            task.pinned ? "text-[#60A5FA]" : "text-[#94A3B8]"
+          className={`text-sm px-2 py-1 rounded-lg transition-all hover:scale-110 active:scale-95 ${
+            task.pinned
+              ? "text-[#60A5FA] bg-[#60A5FA]/20 shadow-[0_0_12px_rgba(96,165,250,0.6)] hover:shadow-[0_0_16px_rgba(96,165,250,0.8)]"
+              : "text-[#94A3B8] bg-[#1E293B] hover:bg-[#334155] shadow-[0_0_8px_rgba(148,163,184,0.3)] hover:shadow-[0_0_12px_rgba(148,163,184,0.5)]"
           }`}
+          title={task.pinned ? "Unpin task" : "Pin task"}
         >
           📌
         </button>

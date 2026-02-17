@@ -50,7 +50,7 @@ export default function TaskCard({ task, onComplete, onCustomize, onFreeze, onDe
   }
 
   return (
-    <div className="bg-[#1E293B] rounded-xl border border-[#334155] p-4 relative">
+    <div className="bg-[#1E293B] rounded-xl border border-[#334155] p-4 relative transition-spring hover:border-[#60A5FA]/30 hover:shadow-lg">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 flex-1">
@@ -111,9 +111,9 @@ export default function TaskCard({ task, onComplete, onCustomize, onFreeze, onDe
         /* Minimal Mode - Just Complete Button */}
         <button
           onClick={handleComplete}
-          className="w-full py-2 rounded-lg font-semibold text-sm transition-colors bg-[#60A5FA] text-white hover:bg-[#3B82F6]"
+          className="w-full py-2 rounded-lg font-semibold text-sm transition-spring bg-[#60A5FA] text-white hover:bg-[#3B82F6] hover:scale-105 active:scale-95 hover:shadow-lg"
         >
-          Complete Task
+          Tap and can be done
         </button>
       ) : (
         <>
@@ -128,10 +128,10 @@ export default function TaskCard({ task, onComplete, onCustomize, onFreeze, onDe
                 <button
                   key={key}
                   onClick={() => onComplete(task.id, 0, key)}
-                  className={`py-2 px-2 rounded-lg text-left transition-colors ${
+                  className={`py-2 px-2 rounded-lg text-left transition-spring hover:scale-105 active:scale-95 ${
                     isSelected
-                      ? "bg-[#60A5FA] text-white"
-                      : "bg-[#0F172A] text-[#94A3B8] border border-[#334155]"
+                      ? "bg-[#60A5FA] text-white shadow-lg"
+                      : "bg-[#0F172A] text-[#94A3B8] border border-[#334155] hover:border-[#60A5FA]/50"
                   }`}
                 >
                   <div className="text-xs font-medium capitalize">{key}</div>
@@ -149,9 +149,9 @@ export default function TaskCard({ task, onComplete, onCustomize, onFreeze, onDe
           {/* Mark Complete Button - Compact */}
           <button
             onClick={handleComplete}
-            className="w-full py-2 rounded-lg font-semibold text-sm transition-colors bg-[#60A5FA] text-white hover:bg-[#3B82F6]"
+            className="w-full py-2 rounded-lg font-semibold text-sm transition-spring bg-[#60A5FA] text-white hover:bg-[#3B82F6] hover:scale-105 active:scale-95 hover:shadow-lg"
           >
-            Complete
+            Tap and can be done
           </button>
         </>
       )}

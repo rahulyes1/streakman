@@ -62,6 +62,18 @@ export default function Progress() {
     },
     grade: 'Needs Work',
   });
+  const [firstUseDate, setFirstUseDate] = useState(null);
+
+  // Initialize first use date
+  useEffect(() => {
+    let savedFirstUse = localStorage.getItem('streakman_first_use');
+    if (!savedFirstUse) {
+      const today = new Date().toISOString();
+      localStorage.setItem('streakman_first_use', today);
+      savedFirstUse = today;
+    }
+    setFirstUseDate(new Date(savedFirstUse));
+  }, []);
 
   // Load tasks and calculate score
   useEffect(() => {
@@ -81,6 +93,84 @@ export default function Progress() {
     window.addEventListener('tasksUpdated', handleUpdate);
     return () => window.removeEventListener('tasksUpdated', handleUpdate);
   }, []);
+
+  // Generate momentum calendar data dynamically
+  const getMomentumData = () => {
+    if (!firstUseDate) return [];
+
+    const data = [];
+    const today = new Date();
+    const firstUse = new Date(firstUseDate);
+    firstUse.setHours(0, 0, 0, 0);
+
+    // Generate last 21 days
+    for (let i = 20; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      const dayEntry = {
+        day: dayNames[date.getDay()],
+        date: `${monthNames[date.getMonth()]} ${date.getDate()}`,
+        score: null,
+        status: 'upcoming'
+      };
+
+      // Check if this date is before first use
+      if (date < firstUse) {
+        dayEntry.status = 'upcoming'; // Show as inactive/blank for days before first use
+        dayEntry.score = null;
+      } else if (date > today) {
+        // Future dates
+        dayEntry.status = 'upcoming';
+        dayEntry.score = null;
+      } else {
+        // Calculate actual status based on tasks completed on this date
+        // For now, use a simple calculation based on whether any tasks were completed
+        const dateStr = date.toDateString();
+        let completedCount = 0;
+
+        tasks.forEach(task => {
+          if (task.completionHistory && task.completionHistory.length > 0) {
+            // Check if task was completed on this specific date
+            const daysDiff = Math.floor((today - date) / (1000 * 60 * 60 * 24));
+            if (daysDiff >= 0 && daysDiff < 7 && task.completionHistory[6 - daysDiff]) {
+              completedCount++;
+            }
+          }
+        });
+
+        const totalTasks = tasks.length || 1;
+        const completionPercentage = (completedCount / totalTasks) * 100;
+
+        if (completedCount === 0) {
+          dayEntry.status = 'missed';
+          dayEntry.score = 0;
+        } else if (completionPercentage >= 90) {
+          dayEntry.status = 'exceptional';
+          dayEntry.score = Math.round(completionPercentage);
+        } else if (completionPercentage >= 70) {
+          dayEntry.status = 'perfect';
+          dayEntry.score = Math.round(completionPercentage);
+        } else if (completionPercentage >= 40) {
+          dayEntry.status = 'struggled';
+          dayEntry.score = Math.round(completionPercentage);
+        } else {
+          dayEntry.status = 'missed';
+          dayEntry.score = Math.round(completionPercentage);
+        }
+      }
+
+      data.push(dayEntry);
+    }
+
+    return data;
+  };
+
+  const momentumData = getMomentumData();
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
@@ -103,6 +193,15 @@ export default function Progress() {
     <>
       <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 pb-24">
         <div className="max-w-4xl mx-auto">
+        {/* Settings Button - Top Right */}
+        <a
+          href="/settings"
+          className="fixed top-4 right-4 z-50 bg-[#1E293B] border border-[#334155] rounded-lg p-2 hover:bg-[#334155] transition-spring hover:scale-110 active:scale-95 shadow-lg animate-scaleIn"
+          title="Settings"
+        >
+          <span className="text-lg">⚙️</span>
+        </a>
+
         {/* Header */}
         <h1 className="text-3xl font-bold mb-6">Progress 📊</h1>
 
@@ -192,7 +291,7 @@ export default function Progress() {
               <div>
                 <h2 className="text-lg font-semibold mb-4">Momentum Calendar</h2>
                 <div className="grid grid-cols-7 gap-2">
-                  {MOMENTUM_DATA.map((day, idx) => {
+                  {momentumData.map((day, idx) => {
                     const config = STATUS_CONFIG[day.status];
                     return (
                       <div

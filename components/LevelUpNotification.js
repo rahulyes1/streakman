@@ -4,8 +4,8 @@ export default function LevelUpNotification({ level, onClose }) {
   if (!level) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fadeIn">
-      <div className="bg-gradient-to-br from-[#F59E0B] via-[#EF4444] to-[#EC4899] rounded-2xl p-8 max-w-md w-full text-center animate-scaleIn">
+    <div className="fixed inset-0 glass-effect z-50 flex items-center justify-center p-4 animate-fadeIn">
+      <div className="bg-gradient-to-br from-[#F59E0B] via-[#EF4444] to-[#EC4899] rounded-2xl p-8 max-w-md w-full text-center animate-modalSlideUp shadow-2xl shadow-[#EF4444]/50">
         {/* Celebration Emoji */}
         <div className="text-8xl mb-4 animate-bounce">🎉</div>
 
@@ -21,7 +21,7 @@ export default function LevelUpNotification({ level, onClose }) {
         {/* Continue Button */}
         <button
           onClick={onClose}
-          className="w-full py-3 rounded-xl font-semibold bg-white text-[#EF4444] hover:scale-105 transition-transform"
+          className="w-full py-3 rounded-xl font-semibold bg-white text-[#EF4444] hover:scale-105 active:scale-95 transition-spring"
         >
           AWESOME!
         </button>
