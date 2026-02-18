@@ -7,8 +7,6 @@ export default function GlobalAddButton() {
   const pathname = usePathname();
   const router = useRouter();
 
-  if (pathname === "/signin") return null;
-
   return (
     <FloatingAddButton
       onClick={() => {

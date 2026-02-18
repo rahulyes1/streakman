@@ -15,7 +15,7 @@ export default function FloatingAddButton({ onClick }) {
       whileHover={{ y: -4, scale: 1.04 }}
       whileTap={{ scale: 0.96 }}
       transition={SPRING}
-      className="glass-card fixed bottom-[calc(84px+env(safe-area-inset-bottom))] right-4 z-[80] flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-300/35 to-teal-400/15 text-teal-50 shadow-[0_18px_42px_rgba(20,184,166,0.45)] pointer-events-auto sm:right-6"
+      className="glass-card fixed bottom-[calc(76px+env(safe-area-inset-bottom))] left-auto right-4 z-[90] flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-300/35 to-teal-400/15 text-teal-50 shadow-[0_18px_42px_rgba(20,184,166,0.45)] pointer-events-auto sm:right-6"
       data-active="true"
       aria-label="Add task"
     >
