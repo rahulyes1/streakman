@@ -17,6 +17,14 @@ function SignInContent() {
   const supabaseReady = hasSupabaseConfig();
 
   useEffect(() => {
+    let settled = false;
+    const timeoutId = window.setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        setCheckingSession(false);
+      }
+    }, 3000);
+
     const bootstrap = async () => {
       try {
         const { session } = await getCurrentSession();
@@ -27,7 +35,11 @@ function SignInContent() {
       } catch {
         // Keep page usable even if initial session fetch fails.
       } finally {
-        setCheckingSession(false);
+        if (!settled) {
+          settled = true;
+          window.clearTimeout(timeoutId);
+          setCheckingSession(false);
+        }
       }
     };
 
@@ -39,7 +51,11 @@ function SignInContent() {
 
     void bootstrap();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      settled = true;
+      window.clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, [nextPath, router]);
 
   const handleGoogleSignIn = async () => {
