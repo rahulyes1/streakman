@@ -139,9 +139,13 @@ export default function Settings() {
 
   useEffect(() => {
     const bootstrap = async () => {
-      const { session } = await getCurrentSession();
-      if (session?.user) {
-        setCurrentUser(getCurrentUser());
+      try {
+        const { session } = await getCurrentSession();
+        if (session?.user) {
+          setCurrentUser(getCurrentUser());
+        }
+      } catch {
+        // Keep settings functional in guest mode if auth bootstrap fails.
       }
     };
 

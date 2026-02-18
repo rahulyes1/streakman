@@ -16,12 +16,16 @@ export default function AuthSyncManager() {
     };
 
     const bootstrap = async () => {
-      const { session } = await getCurrentSession();
-      const userId = session?.user?.id || null;
-      userIdRef.current = userId;
+      try {
+        const { session } = await getCurrentSession();
+        const userId = session?.user?.id || null;
+        userIdRef.current = userId;
 
-      if (userId) {
-        await syncOnLogin({ userId, mergeStrategy: "prompt" });
+        if (userId) {
+          await syncOnLogin({ userId, mergeStrategy: "prompt" });
+        }
+      } catch (error) {
+        console.error("Auth bootstrap sync failed", error);
       }
     };
 
@@ -33,7 +37,11 @@ export default function AuthSyncManager() {
       userIdRef.current = userId;
 
       if (userId) {
-        await syncOnLogin({ userId, mergeStrategy: "prompt" });
+        try {
+          await syncOnLogin({ userId, mergeStrategy: "prompt" });
+        } catch (error) {
+          console.error("Auth event sync failed", error);
+        }
       }
     });
 

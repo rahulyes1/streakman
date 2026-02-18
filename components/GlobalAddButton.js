@@ -13,6 +13,11 @@ export default function GlobalAddButton() {
     <FloatingAddButton
       onClick={() => {
         if (pathname === "/tasks") {
+          const nextParams = new URLSearchParams(window.location.search);
+          nextParams.set("add", "true");
+          nextParams.set("src", "fab");
+
+          router.push(`/tasks?${nextParams.toString()}`, { scroll: false });
           window.dispatchEvent(new Event("openAddTaskModal"));
           return;
         }

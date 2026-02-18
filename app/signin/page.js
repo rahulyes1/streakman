@@ -18,13 +18,17 @@ function SignInContent() {
 
   useEffect(() => {
     const bootstrap = async () => {
-      const { session } = await getCurrentSession();
-      if (session?.user) {
-        router.replace(nextPath);
-        return;
+      try {
+        const { session } = await getCurrentSession();
+        if (session?.user) {
+          router.replace(nextPath);
+          return;
+        }
+      } catch {
+        // Keep page usable even if initial session fetch fails.
+      } finally {
+        setCheckingSession(false);
       }
-
-      setCheckingSession(false);
     };
 
     const subscription = onAuthStateChange((_event, session) => {
