@@ -4,8 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import BottomNav from "@/components/BottomNav";
+import ComebackScreen from "@/components/ComebackScreen";
+import DailyMissionCard from "@/components/DailyMissionCard";
 import DailySpin from "@/components/DailySpin";
 import LevelUpNotification from "@/components/LevelUpNotification";
+import MilestoneCelebration from "@/components/MilestoneCelebration";
+import StreakShieldCard from "@/components/StreakShieldCard";
+import { checkMilestones } from "@/lib/milestones";
+import { setRecoveryMissionForToday } from "@/lib/dailyMission";
 import { initializeDailyReset } from "@/lib/dailyReset";
 import { calculateScore } from "@/lib/scoring";
 
@@ -16,13 +22,77 @@ function gradeTone(grade) {
   return "text-rose-300";
 }
 
+function getDaysSince(lastDateString, todayDate) {
+  if (!lastDateString) return 0;
+
+  const lastDate = new Date(lastDateString);
+  if (Number.isNaN(lastDate.getTime())) return 0;
+
+  const today = new Date(todayDate);
+  lastDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  const diff = today.getTime() - lastDate.getTime();
+  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+}
+
+function getInitialComebackState() {
+  if (typeof window === "undefined") {
+    return { show: false, daysSince: 0 };
+  }
+
+  const today = new Date();
+  const todayString = today.toDateString();
+  const lastActive = localStorage.getItem("streakman_last_active");
+  const daysSince = getDaysSince(lastActive, today);
+
+  const storedTasks = localStorage.getItem("streakman_tasks");
+  let parsedTasks = [];
+  if (storedTasks) {
+    try {
+      const parsed = JSON.parse(storedTasks);
+      if (Array.isArray(parsed)) parsedTasks = parsed;
+    } catch {
+      parsedTasks = [];
+    }
+  }
+
+  const shouldShow = daysSince >= 3 && parsedTasks.length > 0;
+  if (shouldShow) {
+    setRecoveryMissionForToday();
+  }
+
+  localStorage.setItem("streakman_last_active", todayString);
+  return { show: shouldShow, daysSince };
+}
+
+function readStoredTasks() {
+  if (typeof window === "undefined") return [];
+
+  const saved = localStorage.getItem("streakman_tasks");
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function Home() {
-  const [tasks, setTasks] = useState([]);
+  const [comebackState, setComebackState] = useState(getInitialComebackState);
+  const [tasks, setTasks] = useState(readStoredTasks);
   const [showScoreDetails, setShowScoreDetails] = useState(false);
   const [totalXP, setTotalXP] = useState(0);
   const [level, setLevel] = useState(1);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [freezeTokens, setFreezeTokens] = useState(0);
+  const [milestoneToCelebrate, setMilestoneToCelebrate] = useState(() =>
+    checkMilestones(readStoredTasks())
+  );
+  const showComeback = comebackState.show;
+  const comebackDaysSince = comebackState.daysSince;
   const router = useRouter();
 
   useEffect(() => {
@@ -38,18 +108,12 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const loadTasks = () => {
-      const saved = localStorage.getItem("streakman_tasks");
-      if (saved) {
-        setTasks(JSON.parse(saved));
-        return;
-      }
-      setTasks([]);
+    const handleUpdate = () => {
+      const parsed = readStoredTasks();
+      setTasks(parsed);
+      setMilestoneToCelebrate(checkMilestones(parsed));
     };
 
-    loadTasks();
-
-    const handleUpdate = () => loadTasks();
     window.addEventListener("tasksUpdated", handleUpdate);
     return () => window.removeEventListener("tasksUpdated", handleUpdate);
   }, []);
@@ -263,6 +327,9 @@ export default function Home() {
             </section>
           )}
 
+          <DailyMissionCard />
+          <StreakShieldCard />
+
           <div className="glass-card mb-6 rounded-2xl border border-teal-300/30 bg-gradient-to-r from-teal-300/10 to-purple-300/10 p-5 text-center">
             <p className="text-base font-medium">{getMotivation()}</p>
           </div>
@@ -296,6 +363,27 @@ export default function Home() {
           </section>
         </div>
       </div>
+
+      {showComeback && (
+        <ComebackScreen
+          xp={totalXP}
+          level={level}
+          daysSince={comebackDaysSince}
+          onClose={() =>
+            setComebackState((current) => ({
+              ...current,
+              show: false,
+            }))
+          }
+        />
+      )}
+
+      {milestoneToCelebrate && (
+        <MilestoneCelebration
+          milestone={milestoneToCelebrate}
+          onClose={() => setMilestoneToCelebrate(checkMilestones(tasks))}
+        />
+      )}
 
       {showLevelUp && <LevelUpNotification level={showLevelUp} onClose={() => setShowLevelUp(false)} />}
 
