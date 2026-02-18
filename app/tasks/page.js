@@ -15,7 +15,6 @@ import {
   X,
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
-import FloatingAddButton from "@/components/FloatingAddButton";
 import { initializeDailyReset } from "@/lib/dailyReset";
 
 const SPRING = { type: "spring", stiffness: 400, damping: 30 };
@@ -62,12 +61,11 @@ function TasksContent() {
   const searchParams = useSearchParams();
   const [tasks, setTasks] = useState([]);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [newTask, setNewTask] = useState(EMPTY_TASK);
   const [freezeTokens, setFreezeTokens] = useState(0);
   const [popTaskId, setPopTaskId] = useState(null);
   const openFromQuery = searchParams.get("add") === "true";
-  const isAddModalOpen = showAddModal || openFromQuery;
+  const isAddModalOpen = openFromQuery;
 
   useEffect(() => {
     initializeDailyReset();
@@ -119,7 +117,6 @@ function TasksContent() {
   };
 
   const closeAddModal = () => {
-    setShowAddModal(false);
     setNewTask(EMPTY_TASK);
     if (!openFromQuery) return;
 
@@ -640,7 +637,6 @@ function TasksContent() {
         )}
       </AnimatePresence>
 
-      <FloatingAddButton onClick={() => setShowAddModal(true)} />
       <BottomNav />
     </>
   );

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
-import FloatingAddButton from "@/components/FloatingAddButton";
 import IntensitySlider from "@/components/IntensitySlider";
+import { getCurrentUser, signOut } from "@/lib/auth";
 
 const PRESETS = {
   chill: {
@@ -122,6 +122,7 @@ export default function Settings() {
   const [intensities, setIntensities] = useState(() => getInitialIntensities());
   const [activePreset, setActivePreset] = useState(() => detectPreset(getInitialIntensities()));
   const [minimalMode, setMinimalMode] = useState(() => getInitialMinimalMode());
+  const [currentUser] = useState(() => getCurrentUser());
   const router = useRouter();
 
   useEffect(() => {
@@ -140,6 +141,11 @@ export default function Settings() {
   function applyPreset(presetName) {
     setIntensities(PRESETS[presetName]);
     setActivePreset(presetName);
+  }
+
+  function handleSignOut() {
+    signOut();
+    router.replace("/signin");
   }
 
   return (
@@ -236,13 +242,28 @@ export default function Settings() {
             </div>
             <div className="glass-card rounded-2xl p-5">
               <h2 className="text-lg font-semibold">Account</h2>
-              <p className="mt-2 text-sm text-zinc-500">Account controls are coming soon.</p>
+              {currentUser ? (
+                <>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Signed in as <span className="font-semibold text-zinc-200">{currentUser.name}</span>
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-500">{currentUser.email}</p>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="glass-card mt-4 min-h-11 rounded-xl px-4 text-sm font-semibold text-rose-300"
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <p className="mt-2 text-sm text-zinc-500">No active account session.</p>
+              )}
             </div>
           </section>
         </div>
       </div>
 
-      <FloatingAddButton onClick={() => router.push("/tasks?add=true")} />
       <BottomNav />
     </>
   );

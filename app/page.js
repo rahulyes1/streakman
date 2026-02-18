@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import BottomNav from "@/components/BottomNav";
 import DailySpin from "@/components/DailySpin";
-import FloatingAddButton from "@/components/FloatingAddButton";
 import LevelUpNotification from "@/components/LevelUpNotification";
 import { initializeDailyReset } from "@/lib/dailyReset";
 import { calculateScore } from "@/lib/scoring";
@@ -300,7 +299,6 @@ export default function Home() {
 
       {showLevelUp && <LevelUpNotification level={showLevelUp} onClose={() => setShowLevelUp(false)} />}
 
-      <FloatingAddButton onClick={() => router.push("/tasks?add=true")} />
       <BottomNav />
     </>
   );

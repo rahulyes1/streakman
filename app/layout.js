@@ -1,4 +1,5 @@
 import { Inter } from "next/font/google";
+import GlobalAddButton from "@/components/GlobalAddButton";
 import "./globals.css";
 
 const inter = Inter({
@@ -15,6 +16,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={`${inter.className} antialiased bg-[#0F172A]`}>
         {children}
+        <GlobalAddButton />
       </body>
     </html>
   );

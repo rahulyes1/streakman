@@ -1,9 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
-import FloatingAddButton from "@/components/FloatingAddButton";
 import ProgressBar from "@/components/ProgressBar";
 import { initializeDailyReset } from "@/lib/dailyReset";
 import { calculateScore } from "@/lib/scoring";
@@ -48,8 +46,6 @@ export default function Progress() {
     },
     grade: "Needs Work",
   });
-  const router = useRouter();
-
   useEffect(() => {
     initializeDailyReset();
   }, []);
@@ -343,7 +339,6 @@ export default function Progress() {
         </div>
       </div>
 
-      <FloatingAddButton onClick={() => router.push("/tasks?add=true")} />
       <BottomNav />
     </>
   );
