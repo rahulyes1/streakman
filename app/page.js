@@ -7,7 +7,6 @@ import BottomNav from "@/components/BottomNav";
 import ComebackScreen from "@/components/ComebackScreen";
 import DailyMissionCard from "@/components/DailyMissionCard";
 import DailySpin from "@/components/DailySpin";
-import LevelUpNotification from "@/components/LevelUpNotification";
 import MilestoneCelebration from "@/components/MilestoneCelebration";
 import StreakShieldCard from "@/components/StreakShieldCard";
 import { checkMilestones } from "@/lib/milestones";
@@ -86,7 +85,6 @@ export default function Home() {
   const [showScoreDetails, setShowScoreDetails] = useState(false);
   const [totalXP, setTotalXP] = useState(0);
   const [level, setLevel] = useState(1);
-  const [showLevelUp, setShowLevelUp] = useState(false);
   const [freezeTokens, setFreezeTokens] = useState(0);
   const [milestoneToCelebrate, setMilestoneToCelebrate] = useState(() =>
     checkMilestones(readStoredTasks())
@@ -136,14 +134,7 @@ export default function Home() {
       const saved = localStorage.getItem("streakman_xp");
       const xp = parseInt(saved || "0", 10);
       setTotalXP(xp);
-
-      const newLevel = Math.floor(xp / 100) + 1;
-      if (newLevel > level) {
-        setLevel(newLevel);
-        setShowLevelUp(newLevel);
-        return;
-      }
-      setLevel(newLevel);
+      setLevel(Math.floor(xp / 100) + 1);
     };
 
     loadXP();
@@ -151,7 +142,7 @@ export default function Home() {
     const handleUpdate = () => loadXP();
     window.addEventListener("xpUpdated", handleUpdate);
     return () => window.removeEventListener("xpUpdated", handleUpdate);
-  }, [level]);
+  }, []);
 
   useEffect(() => {
     const loadTokens = () => {
@@ -259,7 +250,7 @@ export default function Home() {
             <div className="glass-card rounded-2xl p-3 text-center">
               <p className="text-xs text-zinc-400">Level</p>
               <p className="mt-1 text-2xl font-bold">{level}</p>
-              <p className="text-xs text-purple-200">\u2B50</p>
+              <p className="text-xs text-purple-200">{"\u2B50"}</p>
             </div>
             <div className="glass-card rounded-2xl p-3 text-center">
               <p className="text-xs text-zinc-400">Tokens</p>
@@ -346,7 +337,7 @@ export default function Home() {
             <div className="glass-card rounded-2xl p-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm text-zinc-400">XP Earned</span>
-                <span className="text-xl">\u2B50</span>
+                <span className="text-xl">{"\u2B50"}</span>
               </div>
               <p className="text-3xl font-bold">{totalXP}</p>
               <p className="mt-1 text-xs text-zinc-500">Lifetime XP</p>
@@ -384,8 +375,6 @@ export default function Home() {
           onClose={() => setMilestoneToCelebrate(checkMilestones(tasks))}
         />
       )}
-
-      {showLevelUp && <LevelUpNotification level={showLevelUp} onClose={() => setShowLevelUp(false)} />}
 
       <BottomNav />
     </>

@@ -14,9 +14,9 @@ export default function ComebackScreen({ xp, level, daysSince, onClose }) {
           <p className="mt-2 text-zinc-300">You were away for {daysSince} days. That&apos;s okay.</p>
 
           <div className="mt-5 space-y-2 text-sm text-zinc-300">
-            <p>\u2705 {xp} XP intact</p>
-            <p>\u2705 Level {level} intact</p>
-            <p>\u2705 Streak history intact</p>
+            <p>{"\u2705"} {xp} XP intact</p>
+            <p>{"\u2705"} Level {level} intact</p>
+            <p>{"\u2705"} Streak history intact</p>
           </div>
 
           <div className="mt-6 rounded-2xl border border-teal-300/30 bg-gradient-to-r from-teal-300/12 to-emerald-300/12 p-4">

@@ -122,7 +122,7 @@ export default function DailyMissionCard() {
 
       <div className="flex items-center justify-between gap-2">
         {isComplete ? (
-          <p className="text-sm font-semibold text-emerald-300">\u2705 Mission complete</p>
+          <p className="text-sm font-semibold text-emerald-300">{"\u2705"} Mission complete</p>
         ) : (
           <p className="text-sm text-zinc-400">Keep momentum and lock the bonus.</p>
         )}
