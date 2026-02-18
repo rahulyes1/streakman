@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCurrentSession, onAuthStateChange, signInWithGoogle } from "@/lib/auth";
-import { hasSupabaseConfig } from "@/lib/supabaseClient";
+import { getSupabaseConfigStatus } from "@/lib/supabaseClient";
 
 function SignInContent() {
   const [checkingSession, setCheckingSession] = useState(true);
@@ -14,7 +14,11 @@ function SignInContent() {
 
   const nextParam = searchParams.get("next");
   const nextPath = nextParam && nextParam.startsWith("/") ? nextParam : "/tasks";
-  const supabaseReady = hasSupabaseConfig();
+  const configStatus = getSupabaseConfigStatus();
+  const supabaseReady = configStatus.ready;
+  const oauthErrorRaw = searchParams.get("error_description") || searchParams.get("error");
+  const oauthError = oauthErrorRaw ? decodeURIComponent(oauthErrorRaw.replace(/\+/g, " ")) : "";
+  const visibleError = error || oauthError;
 
   useEffect(() => {
     let settled = false;
@@ -69,8 +73,9 @@ function SignInContent() {
       setError("");
       await signInWithGoogle(nextPath);
     } catch (err) {
-      setSubmitting(false);
       setError(err instanceof Error ? err.message : "Unable to start Google sign in.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -113,11 +118,12 @@ function SignInContent() {
 
               {!supabaseReady && (
                 <p className="mt-4 rounded-xl bg-amber-200/10 p-3 text-xs text-amber-200">
-                  Supabase env vars are missing. Guest mode still works, but cloud sync is disabled.
+                  Supabase env vars are missing ({!configStatus.hasUrl ? "URL " : ""}
+                  {!configStatus.hasAnonKey ? "ANON_KEY" : ""}). Guest mode still works, but cloud sync is disabled.
                 </p>
               )}
 
-              {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
+              {visibleError && <p className="mt-4 text-sm text-rose-300">{visibleError}</p>}
 
               <p className="mt-4 text-xs text-zinc-500">
                 Sign-in is optional. Use it when you want cloud backup and cross-device sync.

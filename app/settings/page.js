@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import BottomNav from "@/components/BottomNav";
 import IntensitySlider from "@/components/IntensitySlider";
 import { getCurrentSession, getCurrentUser, onAuthStateChange, signInWithGoogle, signOut } from "@/lib/auth";
-import { hasSupabaseConfig } from "@/lib/supabaseClient";
+import { getSupabaseConfigStatus } from "@/lib/supabaseClient";
 
 const PRESETS = {
   chill: {
@@ -125,7 +125,8 @@ export default function Settings() {
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
-  const supabaseReady = hasSupabaseConfig();
+  const configStatus = getSupabaseConfigStatus();
+  const supabaseReady = configStatus.ready;
 
   useEffect(() => {
     localStorage.setItem("gamificationIntensities", JSON.stringify(intensities));
@@ -179,8 +180,9 @@ export default function Settings() {
       setAuthError("");
       await signInWithGoogle("/settings");
     } catch (err) {
-      setAuthLoading(false);
       setAuthError(err instanceof Error ? err.message : "Unable to start Google sign in.");
+    } finally {
+      setAuthLoading(false);
     }
   }
 
@@ -320,7 +322,8 @@ export default function Settings() {
                   </button>
                   {!supabaseReady && (
                     <p className="mt-3 text-xs text-amber-200">
-                      Supabase env vars are missing. Guest mode works without cloud sync.
+                      Supabase env vars are missing ({!configStatus.hasUrl ? "URL " : ""}
+                      {!configStatus.hasAnonKey ? "ANON_KEY" : ""}). Guest mode works without cloud sync.
                     </p>
                   )}
                 </>
