@@ -1,10 +1,10 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import IntensitySlider from "@/components/IntensitySlider";
-import { getCurrentUser, signOut } from "@/lib/auth";
+import { getCurrentSession, getCurrentUser, onAuthStateChange, signInWithGoogle, signOut } from "@/lib/auth";
+import { hasSupabaseConfig } from "@/lib/supabaseClient";
 
 const PRESETS = {
   chill: {
@@ -122,16 +122,37 @@ export default function Settings() {
   const [intensities, setIntensities] = useState(() => getInitialIntensities());
   const [activePreset, setActivePreset] = useState(() => detectPreset(getInitialIntensities()));
   const [minimalMode, setMinimalMode] = useState(() => getInitialMinimalMode());
-  const [currentUser] = useState(() => getCurrentUser());
-  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const supabaseReady = hasSupabaseConfig();
 
   useEffect(() => {
     localStorage.setItem("gamificationIntensities", JSON.stringify(intensities));
+    window.dispatchEvent(new Event("settingsUpdated"));
   }, [intensities]);
 
   useEffect(() => {
     localStorage.setItem("minimalMode", JSON.stringify(minimalMode));
+    window.dispatchEvent(new Event("settingsUpdated"));
   }, [minimalMode]);
+
+  useEffect(() => {
+    const bootstrap = async () => {
+      const { session } = await getCurrentSession();
+      if (session?.user) {
+        setCurrentUser(getCurrentUser());
+      }
+    };
+
+    const subscription = onAuthStateChange(() => {
+      setCurrentUser(getCurrentUser());
+    });
+
+    void bootstrap();
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   function handleSliderChange(id, value) {
     setIntensities((current) => ({ ...current, [id]: value }));
@@ -143,9 +164,34 @@ export default function Settings() {
     setActivePreset(presetName);
   }
 
-  function handleSignOut() {
-    signOut();
-    router.replace("/signin");
+  async function handleConnectGoogle() {
+    if (!supabaseReady) {
+      setAuthError("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      return;
+    }
+
+    try {
+      setAuthLoading(true);
+      setAuthError("");
+      await signInWithGoogle("/settings");
+    } catch (err) {
+      setAuthLoading(false);
+      setAuthError(err instanceof Error ? err.message : "Unable to start Google sign in.");
+    }
+  }
+
+  async function handleSignOut() {
+    setAuthLoading(true);
+    setAuthError("");
+
+    try {
+      await signOut();
+      setCurrentUser(null);
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : "Unable to sign out right now.");
+    } finally {
+      setAuthLoading(false);
+    }
   }
 
   return (
@@ -240,25 +286,43 @@ export default function Settings() {
               <h2 className="text-lg font-semibold">Notifications</h2>
               <p className="mt-2 text-sm text-zinc-500">Notification preferences are coming soon.</p>
             </div>
+
             <div className="glass-card rounded-2xl p-5">
               <h2 className="text-lg font-semibold">Account</h2>
               {currentUser ? (
                 <>
-                  <p className="mt-2 text-sm text-zinc-400">
-                    Signed in as <span className="font-semibold text-zinc-200">{currentUser.name}</span>
-                  </p>
+                  <p className="mt-2 text-sm text-zinc-400">Signed in as</p>
+                  <p className="font-semibold text-zinc-200">{currentUser.name || currentUser.email}</p>
                   <p className="mt-1 text-sm text-zinc-500">{currentUser.email}</p>
                   <button
                     type="button"
                     onClick={handleSignOut}
+                    disabled={authLoading}
                     className="glass-card mt-4 min-h-11 rounded-xl px-4 text-sm font-semibold text-rose-300"
                   >
-                    Sign Out
+                    {authLoading ? "Signing out..." : "Sign Out"}
                   </button>
                 </>
               ) : (
-                <p className="mt-2 text-sm text-zinc-500">No active account session.</p>
+                <>
+                  <p className="mt-2 text-sm text-zinc-400">Sign in is optional. Connect Google for cloud sync.</p>
+                  <button
+                    type="button"
+                    onClick={handleConnectGoogle}
+                    disabled={authLoading}
+                    className="glass-card mt-4 min-h-11 rounded-xl px-4 text-sm font-semibold text-teal-200"
+                  >
+                    {authLoading ? "Connecting..." : "Connect Google Account"}
+                  </button>
+                  {!supabaseReady && (
+                    <p className="mt-3 text-xs text-amber-200">
+                      Supabase env vars are missing. Guest mode works without cloud sync.
+                    </p>
+                  )}
+                </>
               )}
+
+              {authError && <p className="mt-3 text-sm text-rose-300">{authError}</p>}
             </div>
           </section>
         </div>

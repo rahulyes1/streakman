@@ -61,11 +61,12 @@ function TasksContent() {
   const searchParams = useSearchParams();
   const [tasks, setTasks] = useState([]);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [newTask, setNewTask] = useState(EMPTY_TASK);
   const [freezeTokens, setFreezeTokens] = useState(0);
   const [popTaskId, setPopTaskId] = useState(null);
   const openFromQuery = searchParams.get("add") === "true";
-  const isAddModalOpen = openFromQuery;
+  const isAddModalOpen = showAddModal || openFromQuery;
 
   useEffect(() => {
     initializeDailyReset();
@@ -102,6 +103,13 @@ function TasksContent() {
     return () => window.removeEventListener("tokensUpdated", handleUpdate);
   }, []);
 
+  useEffect(() => {
+    const openModal = () => setShowAddModal(true);
+    window.addEventListener("openAddTaskModal", openModal);
+
+    return () => window.removeEventListener("openAddTaskModal", openModal);
+  }, []);
+
   const selectedTask = useMemo(
     () => tasks.find((task) => task.id === selectedTaskId) || null,
     [tasks, selectedTaskId]
@@ -117,11 +125,13 @@ function TasksContent() {
   };
 
   const closeAddModal = () => {
+    setShowAddModal(false);
     setNewTask(EMPTY_TASK);
     if (!openFromQuery) return;
 
     const url = new URL(window.location.href);
     url.searchParams.delete("add");
+    url.searchParams.delete("src");
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   };
 

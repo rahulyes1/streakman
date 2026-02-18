@@ -1,18 +1,12 @@
-"use client";
+﻿"use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { registerWithEmail, signInWithEmail } from "@/lib/auth";
-
-const INITIAL_FORM = {
-  name: "",
-  email: "",
-  password: "",
-};
+import { getCurrentSession, onAuthStateChange, signInWithGoogle } from "@/lib/auth";
+import { hasSupabaseConfig } from "@/lib/supabaseClient";
 
 function SignInContent() {
-  const [mode, setMode] = useState("signin");
-  const [form, setForm] = useState(INITIAL_FORM);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -20,48 +14,43 @@ function SignInContent() {
 
   const nextParam = searchParams.get("next");
   const nextPath = nextParam && nextParam.startsWith("/") ? nextParam : "/tasks";
+  const supabaseReady = hasSupabaseConfig();
 
-  const updateForm = (field, value) => {
-    setForm((current) => ({ ...current, [field]: value }));
-  };
+  useEffect(() => {
+    const bootstrap = async () => {
+      const { session } = await getCurrentSession();
+      if (session?.user) {
+        router.replace(nextPath);
+        return;
+      }
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    setError("");
+      setCheckingSession(false);
+    };
 
-    const email = form.email.trim();
-    const password = form.password.trim();
+    const subscription = onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        router.replace(nextPath);
+      }
+    });
 
-    if (!email || !password) {
-      setError("Email and password are required.");
-      return;
-    }
+    void bootstrap();
 
-    if (mode === "signup" && !form.name.trim()) {
-      setError("Name is required for sign up.");
+    return () => subscription.unsubscribe();
+  }, [nextPath, router]);
+
+  const handleGoogleSignIn = async () => {
+    if (!supabaseReady) {
+      setError("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
       return;
     }
 
     try {
       setSubmitting(true);
-
-      if (mode === "signup") {
-        registerWithEmail({
-          name: form.name.trim(),
-          email,
-          password,
-        });
-      } else {
-        signInWithEmail({
-          email,
-          password,
-        });
-      }
-
-      router.replace(nextPath);
+      setError("");
+      await signInWithGoogle(nextPath);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to sign in right now.");
       setSubmitting(false);
+      setError(err instanceof Error ? err.message : "Unable to start Google sign in.");
     }
   };
 
@@ -73,96 +62,49 @@ function SignInContent() {
       <div className="relative z-10 mx-auto max-w-md pt-8">
         <header className="mb-6 text-center">
           <h1 className="text-3xl font-bold tracking-tight">Streakman</h1>
-          <p className="mt-2 text-sm text-zinc-400">
-            {mode === "signin" ? "Sign in to continue your streaks." : "Create your account to start tracking."}
-          </p>
+          <p className="mt-2 text-sm text-zinc-400">Sign in with Google to sync your data across devices.</p>
         </header>
 
-        <form onSubmit={handleSubmit} className="glass-card rounded-3xl p-5 sm:p-6" data-active="true">
-          <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-white/[0.03] p-1">
-            <button
-              type="button"
-              onClick={() => {
-                setMode("signin");
-                setError("");
-              }}
-              className={`min-h-11 rounded-lg text-sm font-semibold transition-spring ${
-                mode === "signin" ? "bg-teal-300/20 text-teal-100" : "text-zinc-400"
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode("signup");
-                setError("");
-              }}
-              className={`min-h-11 rounded-lg text-sm font-semibold transition-spring ${
-                mode === "signup" ? "bg-teal-300/20 text-teal-100" : "text-zinc-400"
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
+        <div className="glass-card rounded-3xl p-5 sm:p-6" data-active="true">
+          {checkingSession ? (
+            <p className="py-8 text-center text-sm text-zinc-400">Checking session...</p>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={submitting}
+                className={`glass-card min-h-11 w-full rounded-xl px-4 text-sm font-semibold ${
+                  submitting
+                    ? "cursor-not-allowed text-zinc-500"
+                    : "bg-gradient-to-r from-teal-300/20 to-purple-300/20 text-zinc-100"
+                }`}
+              >
+                {submitting ? "Redirecting..." : "Continue with Google"}
+              </button>
 
-          <div className="space-y-3">
-            {mode === "signup" && (
-              <label className="block text-sm">
-                <span className="mb-2 block text-zinc-300">Name</span>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(event) => updateForm("name", event.target.value)}
-                  className="glass-card h-11 w-full rounded-xl px-3 outline-none placeholder:text-zinc-500"
-                  placeholder="Your name"
-                />
-              </label>
-            )}
+              <button
+                type="button"
+                onClick={() => router.replace(nextPath)}
+                className="glass-card mt-3 min-h-11 w-full rounded-xl px-4 text-sm font-semibold text-zinc-300"
+              >
+                Continue as Guest
+              </button>
 
-            <label className="block text-sm">
-              <span className="mb-2 block text-zinc-300">Email</span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) => updateForm("email", event.target.value)}
-                className="glass-card h-11 w-full rounded-xl px-3 outline-none placeholder:text-zinc-500"
-                placeholder="you@example.com"
-                autoComplete="email"
-              />
-            </label>
+              {!supabaseReady && (
+                <p className="mt-4 rounded-xl bg-amber-200/10 p-3 text-xs text-amber-200">
+                  Supabase env vars are missing. Guest mode still works, but cloud sync is disabled.
+                </p>
+              )}
 
-            <label className="block text-sm">
-              <span className="mb-2 block text-zinc-300">Password</span>
-              <input
-                type="password"
-                value={form.password}
-                onChange={(event) => updateForm("password", event.target.value)}
-                className="glass-card h-11 w-full rounded-xl px-3 outline-none placeholder:text-zinc-500"
-                placeholder="Password"
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              />
-            </label>
-          </div>
+              {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
 
-          {error && <p className="mt-3 text-sm text-rose-300">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className={`glass-card mt-5 min-h-11 w-full rounded-xl text-sm font-semibold ${
-              submitting
-                ? "cursor-not-allowed text-zinc-500"
-                : "bg-gradient-to-r from-teal-300/20 to-purple-300/20 text-zinc-100"
-            }`}
-          >
-            {submitting ? "Please wait..." : mode === "signin" ? "Sign In" : "Create Account"}
-          </button>
-
-          <p className="mt-4 text-xs text-zinc-500">
-            Local sign-in for this device. Use the same email/password to return.
-          </p>
-        </form>
+              <p className="mt-4 text-xs text-zinc-500">
+                Sign-in is optional. Use it when you want cloud backup and cross-device sync.
+              </p>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

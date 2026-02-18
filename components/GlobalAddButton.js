@@ -9,5 +9,16 @@ export default function GlobalAddButton() {
 
   if (pathname === "/signin") return null;
 
-  return <FloatingAddButton onClick={() => router.push("/tasks?add=true")} />;
+  return (
+    <FloatingAddButton
+      onClick={() => {
+        if (pathname === "/tasks") {
+          window.dispatchEvent(new Event("openAddTaskModal"));
+          return;
+        }
+
+        router.push("/tasks?add=true&src=fab");
+      }}
+    />
+  );
 }
