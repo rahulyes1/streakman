@@ -1,8 +1,10 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect } from "react";
-import IntensitySlider from "@/components/IntensitySlider";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+import FloatingAddButton from "@/components/FloatingAddButton";
+import IntensitySlider from "@/components/IntensitySlider";
 
 const PRESETS = {
   chill: {
@@ -32,54 +34,96 @@ const SLIDER_CONFIGS = [
   {
     id: "surprise",
     label: "Surprise & Randomness",
-    description: "Daily spin, random rewards, mystery challenges"
+    description: "Daily spin, random rewards, mystery challenges",
   },
   {
     id: "competition",
     label: "Competition",
-    description: "Leaderboards, challenges, streak battles"
+    description: "Leaderboards, challenges, streak battles",
   },
   {
     id: "progression",
     label: "Progression Feedback",
-    description: "XP bars, levels, progress tracking"
+    description: "XP bars, levels, progress tracking",
   },
   {
     id: "achievement",
     label: "Achievement Celebrations",
-    description: "Badges, animations, level-up notifications"
+    description: "Badges, animations, level-up notifications",
   },
   {
     id: "reminders",
     label: "Reminders & Urgency",
-    description: "Streak warnings, daily notifications, deadlines"
+    description: "Streak warnings, daily notifications, deadlines",
   },
 ];
 
+function getInitialIntensities() {
+  if (typeof window === "undefined") return PRESETS.balanced;
+
+  const saved = localStorage.getItem("gamificationIntensities");
+  if (!saved) return PRESETS.balanced;
+
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return PRESETS.balanced;
+  }
+}
+
+function getInitialMinimalMode() {
+  if (typeof window === "undefined") return false;
+
+  const saved = localStorage.getItem("minimalMode");
+  if (!saved) return false;
+
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return false;
+  }
+}
+
+function detectPreset(values) {
+  if (
+    values.surprise === PRESETS.chill.surprise &&
+    values.competition === PRESETS.chill.competition &&
+    values.progression === PRESETS.chill.progression &&
+    values.achievement === PRESETS.chill.achievement &&
+    values.reminders === PRESETS.chill.reminders
+  ) {
+    return "chill";
+  }
+
+  if (
+    values.surprise === PRESETS.balanced.surprise &&
+    values.competition === PRESETS.balanced.competition &&
+    values.progression === PRESETS.balanced.progression &&
+    values.achievement === PRESETS.balanced.achievement &&
+    values.reminders === PRESETS.balanced.reminders
+  ) {
+    return "balanced";
+  }
+
+  if (
+    values.surprise === PRESETS.beast.surprise &&
+    values.competition === PRESETS.beast.competition &&
+    values.progression === PRESETS.beast.progression &&
+    values.achievement === PRESETS.beast.achievement &&
+    values.reminders === PRESETS.beast.reminders
+  ) {
+    return "beast";
+  }
+
+  return null;
+}
+
 export default function Settings() {
-  const [intensities, setIntensities] = useState({
-    surprise: 2,
-    competition: 2,
-    progression: 2,
-    achievement: 2,
-    reminders: 2,
-  });
-  const [activePreset, setActivePreset] = useState("balanced");
-  const [minimalMode, setMinimalMode] = useState(false);
+  const [intensities, setIntensities] = useState(() => getInitialIntensities());
+  const [activePreset, setActivePreset] = useState(() => detectPreset(getInitialIntensities()));
+  const [minimalMode, setMinimalMode] = useState(() => getInitialMinimalMode());
+  const router = useRouter();
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("gamificationIntensities");
-    if (saved) {
-      setIntensities(JSON.parse(saved));
-    }
-    const savedMinimal = localStorage.getItem("minimalMode");
-    if (savedMinimal) {
-      setMinimalMode(JSON.parse(savedMinimal));
-    }
-  }, []);
-
-  // Save to localStorage when changed
   useEffect(() => {
     localStorage.setItem("gamificationIntensities", JSON.stringify(intensities));
   }, [intensities]);
@@ -89,8 +133,8 @@ export default function Settings() {
   }, [minimalMode]);
 
   function handleSliderChange(id, value) {
-    setIntensities(prev => ({ ...prev, [id]: value }));
-    setActivePreset(null); // Clear preset when manually adjusting
+    setIntensities((current) => ({ ...current, [id]: value }));
+    setActivePreset(null);
   }
 
   function applyPreset(presetName) {
@@ -100,123 +144,123 @@ export default function Settings() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 pb-24">
-        <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <h1 className="text-3xl font-bold mb-6">Settings ⚙️</h1>
+      <div className="relative min-h-screen overflow-hidden bg-[#0B0B0B] px-4 pb-28 pt-6 text-zinc-100">
+        <div className="mesh-leak mesh-leak-teal" />
+        <div className="mesh-leak mesh-leak-purple" />
 
-        {/* Gamification Intensity Section */}
-        <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-6 mb-6">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">Gamification Intensity</h2>
-            <p className="text-sm text-[#94A3B8]">
-              Customize how much game-like features you want. Turn down for a
-              calmer experience, or crank up for maximum motivation!
-            </p>
-          </div>
+        <div className="relative z-10 mx-auto max-w-4xl">
+          <header className="mb-6">
+            <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+            <p className="mt-1 text-sm text-zinc-400">Tune your streak system exactly how you like it.</p>
+          </header>
 
-          {/* Preset Buttons */}
-          <div className="flex gap-3 mb-6">
-            <button
-              onClick={() => applyPreset("chill")}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
-                activePreset === "chill"
-                  ? "bg-[#60A5FA] text-white"
-                  : "bg-[#0F172A] text-[#94A3B8] border border-[#334155] hover:border-[#60A5FA]"
-              }`}
-            >
-              🌙 Chill
-            </button>
-            <button
-              onClick={() => applyPreset("balanced")}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
-                activePreset === "balanced"
-                  ? "bg-[#60A5FA] text-white"
-                  : "bg-[#0F172A] text-[#94A3B8] border border-[#334155] hover:border-[#60A5FA]"
-              }`}
-            >
-              ⚖️ Balanced
-            </button>
-            <button
-              onClick={() => applyPreset("beast")}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
-                activePreset === "beast"
-                  ? "bg-[#60A5FA] text-white"
-                  : "bg-[#0F172A] text-[#94A3B8] border border-[#334155] hover:border-[#60A5FA]"
-              }`}
-            >
-              🔥 Beast
-            </button>
-          </div>
-
-          {/* Sliders */}
-          <div className="space-y-4">
-            {SLIDER_CONFIGS.map((config) => (
-              <div key={config.id}>
-                <IntensitySlider
-                  label={config.label}
-                  value={intensities[config.id]}
-                  onChange={(value) => handleSliderChange(config.id, value)}
-                />
-                <p className="text-xs text-[#64748B] mt-1 ml-4">
-                  {config.description}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Save Indicator */}
-          <div className="mt-6 text-center">
-            <p className="text-xs text-[#34D399]">
-              ✓ Settings saved automatically
-            </p>
-          </div>
-        </div>
-
-        {/* Notifications Section */}
-        <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-2">Notifications</h2>
-          <p className="text-[#94A3B8]">Coming soon...</p>
-        </div>
-
-        {/* Appearance Section */}
-        <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Appearance</h2>
-
-          {/* Minimal Mode Toggle */}
-          <div className="bg-[#0F172A] rounded-xl p-4 border border-[#334155]">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <h3 className="font-semibold mb-1">🎯 Minimal Mode</h3>
-                <p className="text-sm text-[#94A3B8]">
-                  Simplified interface with no difficulty levels. Just track and complete tasks with one tap.
-                </p>
-              </div>
-              <button
-                onClick={() => setMinimalMode(!minimalMode)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  minimalMode ? "bg-[#60A5FA]" : "bg-[#334155]"
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    minimalMode ? "translate-x-6" : "translate-x-1"
-                  }`}
-                />
-              </button>
+          <section className="glass-card mb-6 rounded-3xl p-6" data-active="true">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold">Gamification Intensity</h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                Lower for a calmer experience, or turn it up for stronger prompts and reward feedback.
+              </p>
             </div>
-          </div>
-        </div>
 
-        {/* Account Section */}
-        <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-6">
-          <h2 className="text-xl font-semibold mb-2">Account</h2>
-          <p className="text-[#94A3B8]">Coming soon...</p>
+            <div className="mb-6 grid grid-cols-3 gap-3">
+              <PresetButton
+                label="Chill"
+                icon="\u{1F319}"
+                active={activePreset === "chill"}
+                onClick={() => applyPreset("chill")}
+              />
+              <PresetButton
+                label="Balanced"
+                icon="\u2696\uFE0F"
+                active={activePreset === "balanced"}
+                onClick={() => applyPreset("balanced")}
+              />
+              <PresetButton
+                label="Beast"
+                icon="\u{1F525}"
+                active={activePreset === "beast"}
+                onClick={() => applyPreset("beast")}
+              />
+            </div>
+
+            <div className="space-y-4">
+              {SLIDER_CONFIGS.map((config) => (
+                <div key={config.id}>
+                  <IntensitySlider
+                    label={config.label}
+                    value={intensities[config.id]}
+                    onChange={(value) => handleSliderChange(config.id, value)}
+                  />
+                  <p className="ml-1 mt-1 text-xs text-zinc-500">{config.description}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 text-center">
+              <p className="text-xs text-emerald-300">Settings are saved automatically.</p>
+            </div>
+          </section>
+
+          <section className="glass-card mb-6 rounded-3xl p-6">
+            <h2 className="text-xl font-semibold">Appearance</h2>
+            <div className="mt-4 rounded-xl bg-white/[0.03] p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="font-semibold">Minimal Mode</h3>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    Simplifies the interface by reducing visual game intensity and keeping core task actions in focus.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMinimalMode((current) => !current)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    minimalMode ? "bg-teal-300" : "bg-white/20"
+                  }`}
+                  aria-label="Toggle minimal mode"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      minimalMode ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-4 sm:grid-cols-2">
+            <div className="glass-card rounded-2xl p-5">
+              <h2 className="text-lg font-semibold">Notifications</h2>
+              <p className="mt-2 text-sm text-zinc-500">Notification preferences are coming soon.</p>
+            </div>
+            <div className="glass-card rounded-2xl p-5">
+              <h2 className="text-lg font-semibold">Account</h2>
+              <p className="mt-2 text-sm text-zinc-500">Account controls are coming soon.</p>
+            </div>
+          </section>
         </div>
       </div>
-    </div>
 
+      <FloatingAddButton onClick={() => router.push("/tasks?add=true")} />
       <BottomNav />
     </>
+  );
+}
+
+function PresetButton({ label, icon, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`glass-card min-h-11 rounded-xl px-3 py-2 text-sm font-semibold transition-spring ${
+        active
+          ? "border border-teal-300/45 bg-teal-300/15 text-teal-100"
+          : "text-zinc-300 hover:text-zinc-100"
+      }`}
+    >
+      <span className="mr-1">{icon}</span>
+      {label}
+    </button>
   );
 }

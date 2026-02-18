@@ -1,43 +1,34 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const REWARDS = [
-  { type: "xp", value: 25, weight: 80, label: "+25 XP", emoji: "✨" },
-  { type: "xp", value: 50, weight: 15, label: "+50 XP", emoji: "⭐" },
-  { type: "xp", value: 100, weight: 4, label: "+100 XP", emoji: "🌟" },
-  { type: "token", value: 1, weight: 1, label: "💎 Freeze Token", emoji: "💎" },
+  { type: "xp", value: 25, weight: 80, label: "+25 XP", emoji: "\u2728" },
+  { type: "xp", value: 50, weight: 15, label: "+50 XP", emoji: "\u2B50" },
+  { type: "xp", value: 100, weight: 4, label: "+100 XP", emoji: "\u{1F31F}" },
+  { type: "token", value: 1, weight: 1, label: "\u{1F48E} Freeze Token", emoji: "\u{1F48E}" },
 ];
 
 export default function DailySpin() {
-  const [canSpin, setCanSpin] = useState(false);
+  const [canSpin, setCanSpin] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const lastSpinDate = localStorage.getItem("streakman_last_spin");
+    const today = new Date().toDateString();
+    return lastSpinDate !== today;
+  });
   const [isSpinning, setIsSpinning] = useState(false);
   const [result, setResult] = useState(null);
 
-  useEffect(() => {
-    // Check if user can spin today
-    const lastSpinDate = localStorage.getItem("streakman_last_spin");
-    const today = new Date().toDateString();
-
-    if (lastSpinDate !== today) {
-      setCanSpin(true);
-    } else {
-      setCanSpin(false);
-    }
-  }, []);
-
   function getRandomReward() {
-    const totalWeight = REWARDS.reduce((sum, r) => sum + r.weight, 0);
+    const totalWeight = REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     let random = Math.random() * totalWeight;
 
     for (const reward of REWARDS) {
       random -= reward.weight;
-      if (random <= 0) {
-        return reward;
-      }
+      if (random <= 0) return reward;
     }
 
-    return REWARDS[0]; // Fallback
+    return REWARDS[0];
   }
 
   function handleSpin() {
@@ -46,23 +37,20 @@ export default function DailySpin() {
     setIsSpinning(true);
     setResult(null);
 
-    // Simulate spinning for 2 seconds
     setTimeout(() => {
       const reward = getRandomReward();
       setResult(reward);
       setIsSpinning(false);
 
-      // Save last spin date
       localStorage.setItem("streakman_last_spin", new Date().toDateString());
       setCanSpin(false);
 
-      // Apply reward
       if (reward.type === "xp") {
-        const currentXP = parseInt(localStorage.getItem("streakman_xp") || "0");
+        const currentXP = parseInt(localStorage.getItem("streakman_xp") || "0", 10);
         localStorage.setItem("streakman_xp", (currentXP + reward.value).toString());
         window.dispatchEvent(new Event("xpUpdated"));
       } else if (reward.type === "token") {
-        const currentTokens = parseInt(localStorage.getItem("streakman_freeze_tokens") || "0");
+        const currentTokens = parseInt(localStorage.getItem("streakman_freeze_tokens") || "0", 10);
         localStorage.setItem("streakman_freeze_tokens", (currentTokens + reward.value).toString());
         window.dispatchEvent(new Event("tokensUpdated"));
       }
@@ -70,61 +58,53 @@ export default function DailySpin() {
   }
 
   return (
-    <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-[#F1F5F9]">🎲 Daily Spin</h3>
-        {!canSpin && !result && (
-          <span className="text-xs text-[#94A3B8]">Available tomorrow</span>
-        )}
+    <div className="glass-card rounded-3xl p-5" data-active="true">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-zinc-100">Daily Spin</h3>
+        {!canSpin && !result && <span className="text-xs text-zinc-400">Available tomorrow</span>}
       </div>
 
-      {/* Spin Wheel Visual */}
-      <div className="flex justify-center mb-4">
+      <div className="mb-4 flex justify-center">
         <div
-          className={`w-24 h-24 rounded-full bg-gradient-to-br from-[#60A5FA] to-[#34D399] flex items-center justify-center text-4xl ${
-            isSpinning ? 'animate-spin' : ''
+          className={`flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-teal-300/80 to-purple-300/80 text-4xl ${
+            isSpinning ? "animate-spin" : ""
           }`}
         >
-          {isSpinning ? '🎰' : '🎁'}
+          {isSpinning ? "\u{1F3B0}" : "\u{1F381}"}
         </div>
       </div>
 
-      {/* Result Display */}
       {result && (
-        <div className="bg-[#34D399]/10 border border-[#34D399]/30 rounded-xl p-3 mb-4 text-center">
-          <p className="text-2xl mb-2">{result.emoji}</p>
-          <p className="text-sm font-semibold text-[#34D399]">
-            You won {result.label}!
-          </p>
+        <div className="mb-4 rounded-xl border border-teal-300/40 bg-teal-300/10 p-3 text-center">
+          <p className="mb-2 text-2xl">{result.emoji}</p>
+          <p className="text-sm font-semibold text-teal-200">You won {result.label}!</p>
         </div>
       )}
 
-      {/* Spin Button */}
       {canSpin && !result ? (
         <button
           onClick={handleSpin}
           disabled={isSpinning}
-          className={`w-full py-3 rounded-xl font-semibold transition-all ${
+          className={`glass-card w-full rounded-xl py-3 font-semibold transition-all ${
             isSpinning
-              ? 'bg-[#94A3B8] text-[#0F172A] cursor-not-allowed'
-              : 'bg-gradient-to-r from-[#60A5FA] to-[#34D399] text-white hover:scale-105'
+              ? "cursor-not-allowed bg-zinc-400/20 text-zinc-400"
+              : "bg-gradient-to-r from-teal-300/20 to-purple-300/20 text-zinc-100 hover:text-teal-100"
           }`}
         >
-          {isSpinning ? 'SPINNING...' : 'SPIN NOW'}
+          {isSpinning ? "SPINNING..." : "SPIN NOW"}
         </button>
       ) : !canSpin ? (
-        <div className="w-full py-3 rounded-xl font-semibold bg-[#0F172A] text-[#64748B] text-center border border-[#334155]">
+        <div className="glass-card w-full rounded-xl border border-white/10 py-3 text-center font-semibold text-zinc-500">
           Come back tomorrow!
         </div>
       ) : null}
 
-      {/* Reward Odds */}
-      <div className="mt-4 text-xs text-[#94A3B8] space-y-1">
-        <p className="font-semibold mb-2">Rewards:</p>
-        {REWARDS.map((r, idx) => (
-          <div key={idx} className="flex justify-between">
-            <span>{r.label}</span>
-            <span>{r.weight}%</span>
+      <div className="mt-4 space-y-1 text-xs text-zinc-400">
+        <p className="mb-2 font-semibold">Rewards:</p>
+        {REWARDS.map((reward) => (
+          <div key={reward.label} className="flex justify-between">
+            <span>{reward.label}</span>
+            <span>{reward.weight}%</span>
           </div>
         ))}
       </div>

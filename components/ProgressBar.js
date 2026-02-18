@@ -5,15 +5,15 @@ export default function ProgressBar({ label, value, max, color }) {
 
   return (
     <div>
-      <div className="flex justify-between text-sm mb-2">
-        <span className="text-[#F1F5F9]">{label}</span>
-        <span className="text-[#94A3B8]">
+      <div className="mb-2 flex items-center justify-between text-sm">
+        <span className="font-medium text-zinc-100">{label}</span>
+        <span className="text-zinc-400">
           {value}/{max} ({Math.round(percentage)}%)
         </span>
       </div>
-      <div className="h-3 bg-[#0F172A] rounded-full overflow-hidden">
+      <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
         <div
-          className={`h-full ${color} transition-all duration-500 rounded-full`}
+          className={`h-full rounded-full ${color} transition-all duration-500`}
           style={{ width: `${percentage}%` }}
         />
       </div>

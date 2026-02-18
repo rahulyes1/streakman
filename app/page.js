@@ -1,20 +1,24 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect } from "react";
-import BottomNav from "@/components/BottomNav";
-import FloatingAddButton from "@/components/FloatingAddButton";
-import BadgeDisplay from "@/components/BadgeDisplay";
-import DailySpin from "@/components/DailySpin";
-import LevelUpNotification from "@/components/LevelUpNotification";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { calculateScore } from "@/lib/scoring";
+import BadgeDisplay from "@/components/BadgeDisplay";
+import BottomNav from "@/components/BottomNav";
+import DailySpin from "@/components/DailySpin";
+import FloatingAddButton from "@/components/FloatingAddButton";
+import LevelUpNotification from "@/components/LevelUpNotification";
 import { initializeDailyReset } from "@/lib/dailyReset";
+import { calculateScore } from "@/lib/scoring";
+
+function gradeTone(grade) {
+  if (grade.startsWith("A")) return "text-emerald-300";
+  if (grade.startsWith("B")) return "text-teal-200";
+  if (grade.startsWith("C")) return "text-amber-300";
+  return "text-rose-300";
+}
 
 export default function Home() {
   const [tasks, setTasks] = useState([]);
-  const [totalScore, setTotalScore] = useState(0);
-  const [grade, setGrade] = useState('');
-  const [scoreBreakdown, setScoreBreakdown] = useState(null);
   const [showScoreDetails, setShowScoreDetails] = useState(false);
   const [totalXP, setTotalXP] = useState(0);
   const [level, setLevel] = useState(1);
@@ -22,334 +26,303 @@ export default function Home() {
   const [freezeTokens, setFreezeTokens] = useState(0);
   const router = useRouter();
 
-  // Redirect to tasks page on initial load
   useEffect(() => {
-    const hasVisitedHome = sessionStorage.getItem('visited_home');
+    const hasVisitedHome = sessionStorage.getItem("visited_home");
     if (!hasVisitedHome) {
-      sessionStorage.setItem('visited_home', 'true');
-      router.push('/tasks');
+      sessionStorage.setItem("visited_home", "true");
+      router.push("/tasks");
     }
   }, [router]);
 
-  // Initialize daily reset system
   useEffect(() => {
     initializeDailyReset();
   }, []);
 
-  // Load tasks from localStorage
   useEffect(() => {
     const loadTasks = () => {
-      const saved = localStorage.getItem('streakman_tasks');
+      const saved = localStorage.getItem("streakman_tasks");
       if (saved) {
         setTasks(JSON.parse(saved));
+        return;
       }
+      setTasks([]);
     };
 
     loadTasks();
 
-    // Listen for task updates
     const handleUpdate = () => loadTasks();
-    window.addEventListener('tasksUpdated', handleUpdate);
-    return () => window.removeEventListener('tasksUpdated', handleUpdate);
+    window.addEventListener("tasksUpdated", handleUpdate);
+    return () => window.removeEventListener("tasksUpdated", handleUpdate);
   }, []);
 
-  // Calculate stats
-  const completedToday = tasks.filter(t => t.completedToday).length;
-  const currentStreak = Math.max(...tasks.map(t => t.streak), 0);
+  const completedToday = tasks.filter((task) => task.completedToday).length;
+  const currentStreak = Math.max(...tasks.map((task) => task.streak || 0), 0);
+  const scoreData = tasks.length
+    ? calculateScore(tasks)
+    : {
+        totalScore: 0,
+        grade: "",
+        breakdown: null,
+      };
+  const totalScore = scoreData.totalScore;
+  const grade = scoreData.grade;
+  const scoreBreakdown = scoreData.breakdown;
 
-  // Calculate real score using algorithm
-  useEffect(() => {
-    if (tasks.length > 0) {
-      const result = calculateScore(tasks);
-      setTotalScore(result.totalScore);
-      setGrade(result.grade);
-      setScoreBreakdown(result.breakdown);
-    } else {
-      setTotalScore(0);
-      setGrade('');
-      setScoreBreakdown(null);
-    }
-  }, [tasks]);
-
-  // Load XP and calculate level
   useEffect(() => {
     const loadXP = () => {
-      const saved = localStorage.getItem('streakman_xp');
-      if (saved) {
-        const xp = parseInt(saved);
-        setTotalXP(xp);
+      const saved = localStorage.getItem("streakman_xp");
+      const xp = parseInt(saved || "0", 10);
+      setTotalXP(xp);
 
-        // Calculate level (every 100 XP = 1 level)
-        const newLevel = Math.floor(xp / 100) + 1;
-        const oldLevel = level;
-
-        if (newLevel > oldLevel) {
-          setLevel(newLevel);
-          setShowLevelUp(newLevel);
-        } else {
-          setLevel(newLevel);
-        }
+      const newLevel = Math.floor(xp / 100) + 1;
+      if (newLevel > level) {
+        setLevel(newLevel);
+        setShowLevelUp(newLevel);
+        return;
       }
+      setLevel(newLevel);
     };
 
     loadXP();
 
     const handleUpdate = () => loadXP();
-    window.addEventListener('xpUpdated', handleUpdate);
-    return () => window.removeEventListener('xpUpdated', handleUpdate);
+    window.addEventListener("xpUpdated", handleUpdate);
+    return () => window.removeEventListener("xpUpdated", handleUpdate);
   }, [level]);
 
-  // Load freeze tokens
   useEffect(() => {
     const loadTokens = () => {
-      const tokens = parseInt(localStorage.getItem('streakman_freeze_tokens') || '0');
+      const tokens = parseInt(localStorage.getItem("streakman_freeze_tokens") || "0", 10);
       setFreezeTokens(tokens);
     };
 
     loadTokens();
 
     const handleUpdate = () => loadTokens();
-    window.addEventListener('tokensUpdated', handleUpdate);
-    return () => window.removeEventListener('tokensUpdated', handleUpdate);
+    window.addEventListener("tokensUpdated", handleUpdate);
+    return () => window.removeEventListener("tokensUpdated", handleUpdate);
   }, []);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning! 👋";
-    if (hour < 18) return "Good Afternoon! 👋";
-    return "Good Evening! 👋";
+    if (hour < 12) return "Good Morning \u{1F44B}";
+    if (hour < 18) return "Good Afternoon \u{1F44B}";
+    return "Good Evening \u{1F44B}";
   };
 
   const getMotivation = () => {
     if (completedToday === 0) {
-      return "No tasks completed yet today. Let's get started! 💪";
+      return "No tasks completed yet today. Let\'s start your first win.";
     }
     if (completedToday === 1) {
-      return "1 task completed today. Keep it up! 🌟";
+      return "1 task completed today. Keep moving.";
     }
-    return `${completedToday} tasks completed today. You're crushing it! 🔥`;
+    return `${completedToday} tasks completed today. You\'re in rhythm.`;
   };
 
   const getImprovementSuggestions = () => {
     if (!scoreBreakdown) return [];
+
     const suggestions = [];
 
-    // Completion Rate (max 40)
     if (scoreBreakdown.completionRate < 30) {
       suggestions.push({
         area: "Daily Consistency",
         current: scoreBreakdown.completionRate,
         max: 40,
-        tip: "Complete tasks on more days this week to boost your completion rate"
+        tip: "Complete tasks on more days this week to boost completion rate.",
       });
     }
 
-    // Streak Strength (max 35)
     if (scoreBreakdown.streakStrength < 25) {
       suggestions.push({
         area: "Streak Building",
         current: scoreBreakdown.streakStrength,
         max: 35,
-        tip: "Build longer streaks by completing tasks consecutively each day"
+        tip: "Build longer streaks by completing tasks on back-to-back days.",
       });
     }
 
-    // Weekly Consistency (max 15)
     if (scoreBreakdown.weeklyConsistency < 10) {
       suggestions.push({
         area: "Weekly Activity",
         current: scoreBreakdown.weeklyConsistency,
         max: 15,
-        tip: "Try to be active every day of the week for maximum consistency"
+        tip: "Try to stay active through all days of the week.",
       });
     }
 
-    // Improvement Trend (max 10)
     if (scoreBreakdown.improvementTrend < 7) {
       suggestions.push({
         area: "Task Momentum",
         current: scoreBreakdown.improvementTrend,
         max: 10,
-        tip: "Keep more tasks active with ongoing streaks to improve your trend"
+        tip: "Keep more tasks active with current streaks to improve trend.",
       });
     }
 
     return suggestions;
   };
 
+  const improvementSuggestions = getImprovementSuggestions();
+
   return (
     <>
-      <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 pb-24">
-        <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold mb-2">Streak Manager 🔥</h1>
-            <p className="text-2xl text-[#94A3B8]">{getGreeting()}</p>
-          </div>
+      <div className="relative min-h-screen overflow-hidden bg-[#0B0B0B] px-4 pb-28 pt-6 text-zinc-100">
+        <div className="mesh-leak mesh-leak-teal" />
+        <div className="mesh-leak mesh-leak-purple" />
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-4 gap-2 mb-8">
-            <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-3 text-center">
-              <p className="text-xs text-[#94A3B8] mb-1">Streak</p>
-              <p className="text-2xl font-bold">{currentStreak}</p>
-              <p className="text-xs text-[#94A3B8]">🔥</p>
+        <div className="relative z-10 mx-auto max-w-2xl">
+          <header className="mb-6">
+            <h1 className="text-3xl font-bold tracking-tight">Marks</h1>
+            <p className="mt-1 text-sm text-zinc-400">{getGreeting()}</p>
+          </header>
+
+          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="glass-card rounded-2xl p-3 text-center">
+              <p className="text-xs text-zinc-400">Streak</p>
+              <p className="mt-1 text-2xl font-bold">{currentStreak}</p>
+              <p className="text-xs text-amber-300">{"\u{1F525}"}</p>
             </div>
-            <div
-              onClick={() => setShowScoreDetails(!showScoreDetails)}
-              className="bg-[#1E293B] rounded-2xl border border-[#334155] p-3 text-center cursor-pointer hover:bg-[#334155] transition-spring hover:scale-105 active:scale-95 hover:shadow-lg"
+            <button
+              type="button"
+              onClick={() => setShowScoreDetails((current) => !current)}
+              className="glass-card rounded-2xl p-3 text-center transition-spring hover:-translate-y-0.5"
             >
-              <p className="text-xs text-[#94A3B8] mb-1">Score</p>
-              <p className="text-2xl font-bold">{totalScore}</p>
-              <p className="text-xs text-[#94A3B8]">/100 {grade}</p>
+              <p className="text-xs text-zinc-400">Score</p>
+              <p className="mt-1 text-2xl font-bold">{totalScore}</p>
+              <p className={`text-xs ${gradeTone(grade)}`}>{grade || "-"}</p>
+            </button>
+            <div className="glass-card rounded-2xl p-3 text-center">
+              <p className="text-xs text-zinc-400">Level</p>
+              <p className="mt-1 text-2xl font-bold">{level}</p>
+              <p className="text-xs text-purple-200">\u2B50</p>
             </div>
-            <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-3 text-center">
-              <p className="text-xs text-[#94A3B8] mb-1">Level</p>
-              <p className="text-2xl font-bold">{level}</p>
-              <p className="text-xs text-[#94A3B8]">⭐</p>
-            </div>
-            <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-3 text-center">
-              <p className="text-xs text-[#94A3B8] mb-1">Tokens</p>
-              <p className="text-2xl font-bold">{freezeTokens}</p>
-              <p className="text-xs text-[#94A3B8]">💎</p>
+            <div className="glass-card rounded-2xl p-3 text-center">
+              <p className="text-xs text-zinc-400">Tokens</p>
+              <p className="mt-1 text-2xl font-bold">{freezeTokens}</p>
+              <p className="text-xs text-teal-200">{"\u{1F48E}"}</p>
             </div>
           </div>
 
-          {/* Score Details Expandable Section */}
           {showScoreDetails && scoreBreakdown && (
-            <div className="bg-[#1E293B] rounded-2xl border border-[#60A5FA]/50 p-5 mb-8 animate-slideDown shadow-lg shadow-[#60A5FA]/20">
-              <h3 className="text-lg font-semibold mb-4 flex items-center justify-between">
-                <span>Score Breakdown</span>
-                <span className="text-2xl font-bold text-[#60A5FA]">{totalScore}/100</span>
-              </h3>
-
-              <div className="space-y-3 mb-5">
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-[#94A3B8]">Completion Rate</span>
-                    <span className="text-sm font-semibold">{scoreBreakdown.completionRate}/40</span>
-                  </div>
-                  <div className="w-full bg-[#0F172A] rounded-full h-2">
-                    <div
-                      className="bg-gradient-to-r from-[#60A5FA] to-[#3B82F6] h-2 rounded-full transition-all"
-                      style={{ width: `${(scoreBreakdown.completionRate / 40) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-[#94A3B8]">Streak Strength</span>
-                    <span className="text-sm font-semibold">{scoreBreakdown.streakStrength}/35</span>
-                  </div>
-                  <div className="w-full bg-[#0F172A] rounded-full h-2">
-                    <div
-                      className="bg-gradient-to-r from-[#F59E0B] to-[#EF4444] h-2 rounded-full transition-all"
-                      style={{ width: `${(scoreBreakdown.streakStrength / 35) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-[#94A3B8]">Weekly Consistency</span>
-                    <span className="text-sm font-semibold">{scoreBreakdown.weeklyConsistency}/15</span>
-                  </div>
-                  <div className="w-full bg-[#0F172A] rounded-full h-2">
-                    <div
-                      className="bg-gradient-to-r from-[#34D399] to-[#10B981] h-2 rounded-full transition-all"
-                      style={{ width: `${(scoreBreakdown.weeklyConsistency / 15) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-[#94A3B8]">Improvement Trend</span>
-                    <span className="text-sm font-semibold">{scoreBreakdown.improvementTrend}/10</span>
-                  </div>
-                  <div className="w-full bg-[#0F172A] rounded-full h-2">
-                    <div
-                      className="bg-gradient-to-r from-[#A78BFA] to-[#8B5CF6] h-2 rounded-full transition-all"
-                      style={{ width: `${(scoreBreakdown.improvementTrend / 10) * 100}%` }}
-                    />
-                  </div>
-                </div>
+            <section className="glass-card mb-6 rounded-3xl p-5 animate-slideDown" data-active="true">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Score Breakdown</h2>
+                <span className="text-2xl font-bold text-teal-200">{totalScore}/100</span>
               </div>
 
-              {/* Improvement Suggestions */}
-              {getImprovementSuggestions().length > 0 && (
-                <div className="border-t border-[#334155] pt-4">
-                  <h4 className="text-sm font-semibold mb-3 text-[#60A5FA]">💡 How to Improve</h4>
+              <div className="space-y-3">
+                <MetricLine
+                  label="Completion Rate"
+                  value={scoreBreakdown.completionRate}
+                  max={40}
+                  fillClass="from-teal-300 to-cyan-300"
+                />
+                <MetricLine
+                  label="Streak Strength"
+                  value={scoreBreakdown.streakStrength}
+                  max={35}
+                  fillClass="from-amber-300 to-rose-300"
+                />
+                <MetricLine
+                  label="Weekly Consistency"
+                  value={scoreBreakdown.weeklyConsistency}
+                  max={15}
+                  fillClass="from-emerald-300 to-teal-300"
+                />
+                <MetricLine
+                  label="Improvement Trend"
+                  value={scoreBreakdown.improvementTrend}
+                  max={10}
+                  fillClass="from-purple-300 to-fuchsia-300"
+                />
+              </div>
+
+              {improvementSuggestions.length > 0 ? (
+                <div className="mt-5 border-t border-white/10 pt-4">
+                  <h3 className="mb-3 text-sm font-semibold text-teal-200">How to Improve</h3>
                   <div className="space-y-2">
-                    {getImprovementSuggestions().map((suggestion, idx) => (
-                      <div key={idx} className="bg-[#0F172A] rounded-lg p-3">
-                        <div className="flex justify-between mb-1">
-                          <span className="text-xs font-semibold text-[#F1F5F9]">{suggestion.area}</span>
-                          <span className="text-xs text-[#94A3B8]">{suggestion.current}/{suggestion.max}</span>
+                    {improvementSuggestions.map((suggestion) => (
+                      <div key={suggestion.area} className="rounded-xl bg-white/[0.03] p-3">
+                        <div className="mb-1 flex justify-between text-xs">
+                          <span className="font-semibold text-zinc-100">{suggestion.area}</span>
+                          <span className="text-zinc-400">
+                            {suggestion.current}/{suggestion.max}
+                          </span>
                         </div>
-                        <p className="text-xs text-[#94A3B8]">{suggestion.tip}</p>
+                        <p className="text-xs text-zinc-400">{suggestion.tip}</p>
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
-
-              {getImprovementSuggestions().length === 0 && (
-                <div className="border-t border-[#334155] pt-4 text-center">
-                  <p className="text-sm text-[#34D399]">🎉 Perfect score! Keep it up!</p>
+              ) : (
+                <div className="mt-5 border-t border-white/10 pt-4 text-center">
+                  <p className="text-sm text-emerald-300">Perfect score range. Keep this momentum.</p>
                 </div>
               )}
-            </div>
+            </section>
           )}
 
-          {/* Motivational Message */}
-          <div className="bg-gradient-to-r from-[#60A5FA]/10 to-[#34D399]/10 border border-[#60A5FA]/30 rounded-2xl p-6 text-center mb-6">
-            <p className="text-lg font-medium">{getMotivation()}</p>
+          <div className="glass-card mb-6 rounded-2xl border border-teal-300/30 bg-gradient-to-r from-teal-300/10 to-purple-300/10 p-5 text-center">
+            <p className="text-base font-medium">{getMotivation()}</p>
           </div>
 
-          {/* Quick Stats Widgets */}
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            <div className="bg-[#1E293B] rounded-xl border border-[#334155] p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-[#94A3B8]">Active Tasks</span>
-                <span className="text-2xl">📝</span>
+          <div className="mb-6 grid grid-cols-2 gap-3">
+            <div className="glass-card rounded-2xl p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm text-zinc-400">Active Tasks</span>
+                <span className="text-xl">{"\u{1F4DD}"}</span>
               </div>
               <p className="text-3xl font-bold">{tasks.length}</p>
-              <p className="text-xs text-[#64748B] mt-1">Total tasks tracked</p>
+              <p className="mt-1 text-xs text-zinc-500">Total tasks tracked</p>
             </div>
-            <div className="bg-[#1E293B] rounded-xl border border-[#334155] p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-[#94A3B8]">Completed</span>
-                <span className="text-2xl">✅</span>
+            <div className="glass-card rounded-2xl p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm text-zinc-400">XP Earned</span>
+                <span className="text-xl">\u2B50</span>
               </div>
-              <p className="text-3xl font-bold">{completedToday}</p>
-              <p className="text-xs text-[#64748B] mt-1">Tasks done today</p>
+              <p className="text-3xl font-bold">{totalXP}</p>
+              <p className="mt-1 text-xs text-zinc-500">Lifetime XP</p>
             </div>
           </div>
 
-          {/* Daily Spin */}
-          <div className="mb-8">
+          <div className="mb-6">
             <DailySpin />
           </div>
 
-          {/* Badges Section */}
-          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] p-5">
-            <h3 className="text-lg font-semibold mb-3">Recent Badges</h3>
+          <section className="glass-card rounded-3xl p-5">
+            <h3 className="mb-3 text-lg font-semibold">Recent Badges</h3>
             <BadgeDisplay compact={true} />
-          </div>
+          </section>
         </div>
       </div>
 
-      {/* Level Up Notification */}
-      {showLevelUp && (
-        <LevelUpNotification
-          level={showLevelUp}
-          onClose={() => setShowLevelUp(false)}
-        />
-      )}
+      {showLevelUp && <LevelUpNotification level={showLevelUp} onClose={() => setShowLevelUp(false)} />}
 
-      <FloatingAddButton onClick={() => router.push('/tasks?add=true')} />
+      <FloatingAddButton onClick={() => router.push("/tasks?add=true")} />
       <BottomNav />
     </>
+  );
+}
+
+function MetricLine({ label, value, max, fillClass }) {
+  const percentage = Math.min((value / max) * 100, 100);
+
+  return (
+    <div>
+      <div className="mb-1 flex justify-between text-sm">
+        <span className="text-zinc-300">{label}</span>
+        <span className="text-zinc-400">
+          {value}/{max}
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+        <div
+          className={`h-full rounded-full bg-gradient-to-r ${fillClass}`}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
   );
 }
