@@ -15,7 +15,9 @@ import {
   X,
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import CompletionParticles from "@/components/CompletionParticles";
 import { initializeDailyReset } from "@/lib/dailyReset";
+import { allTasksComplete, taskComplete } from "@/lib/haptics";
 
 const SPRING = { type: "spring", stiffness: 400, damping: 30 };
 
@@ -65,8 +67,13 @@ function TasksContent() {
   const [newTask, setNewTask] = useState(EMPTY_TASK);
   const [freezeTokens, setFreezeTokens] = useState(0);
   const [popTaskId, setPopTaskId] = useState(null);
+  const [burst, setBurst] = useState(null);
   const openFromQuery = searchParams.get("add") === "true";
   const isAddModalOpen = showAddModal || openFromQuery;
+  const now = new Date();
+  const isLateNight = now.getHours() === 23 && now.getMinutes() >= 40;
+  const hasIncompleteTasks = tasks.some((task) => !task.completedToday);
+  const lateNightMode = isLateNight && hasIncompleteTasks;
 
   useEffect(() => {
     initializeDailyReset();
@@ -118,9 +125,10 @@ function TasksContent() {
   const pinnedTasks = useMemo(() => sortTasks(tasks.filter((task) => task.pinned)), [tasks]);
   const unpinnedTasks = useMemo(() => sortTasks(tasks.filter((task) => !task.pinned)), [tasks]);
 
-  const saveTasks = (updatedTasks) => {
+  const saveTasks = (updatedTasks, onBeforeDispatch) => {
     localStorage.setItem("streakman_tasks", JSON.stringify(updatedTasks));
     setTasks(updatedTasks);
+    onBeforeDispatch?.(updatedTasks);
     window.dispatchEvent(new Event("tasksUpdated"));
   };
 
@@ -251,7 +259,16 @@ function TasksContent() {
       };
     });
 
-    saveTasks(updated);
+    saveTasks(updated, (nextTasks) => {
+      if (!completedNow) return;
+
+      const completedCount = nextTasks.filter((task) => task.completedToday).length;
+      if (nextTasks.length > 0 && completedCount === nextTasks.length) {
+        allTasksComplete();
+      } else {
+        taskComplete();
+      }
+    });
 
     if (completedNow) {
       setPopTaskId(taskId);
@@ -301,11 +318,26 @@ function TasksContent() {
     setSelectedTaskId(null);
   };
 
+  const handleCompletionPress = (event, taskId) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setBurst({
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    });
+
+    completeTask(taskId);
+
+    window.setTimeout(() => {
+      setBurst(null);
+    }, 300);
+  };
+
   return (
     <>
       <div className="relative min-h-screen overflow-hidden bg-[#0B0B0B] px-4 pb-28 pt-6 text-zinc-100">
         <div className="mesh-leak mesh-leak-teal" />
         <div className="mesh-leak mesh-leak-purple" />
+        {lateNightMode && <div className="mesh-leak mesh-leak-warm" />}
 
         <div className="relative z-10 mx-auto max-w-2xl">
           <motion.header
@@ -339,8 +371,9 @@ function TasksContent() {
               <TaskSection
                 title="Pinned"
                 tasks={pinnedTasks}
+                lateNightMode={lateNightMode}
                 popTaskId={popTaskId}
-                onComplete={completeTask}
+                onCompletionPress={handleCompletionPress}
                 onOpenDetails={setSelectedTaskId}
                 onRename={renameTask}
                 onTogglePin={togglePin}
@@ -348,8 +381,9 @@ function TasksContent() {
               <TaskSection
                 title="All Tasks"
                 tasks={unpinnedTasks}
+                lateNightMode={lateNightMode}
                 popTaskId={popTaskId}
-                onComplete={completeTask}
+                onCompletionPress={handleCompletionPress}
                 onOpenDetails={setSelectedTaskId}
                 onRename={renameTask}
                 onTogglePin={togglePin}
@@ -427,7 +461,7 @@ function TasksContent() {
               <div className="space-y-2">
                 <button
                   type="button"
-                  onClick={() => completeTask(selectedTask.id)}
+                  onClick={(event) => handleCompletionPress(event, selectedTask.id)}
                   className={`glass-card flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold ${
                     selectedTask.completedToday
                       ? "text-emerald-300"
@@ -647,6 +681,16 @@ function TasksContent() {
         )}
       </AnimatePresence>
 
+      {burst && (
+        <CompletionParticles
+          x={burst.x}
+          y={burst.y}
+          color="#5eead4"
+          active={true}
+          onComplete={() => setBurst(null)}
+        />
+      )}
+
       <BottomNav />
     </>
   );
@@ -655,8 +699,9 @@ function TasksContent() {
 function TaskSection({
   title,
   tasks,
+  lateNightMode,
   popTaskId,
-  onComplete,
+  onCompletionPress,
   onOpenDetails,
   onRename,
   onTogglePin,
@@ -683,7 +728,8 @@ function TaskSection({
             >
               <TaskRow
                 task={task}
-                onComplete={onComplete}
+                lateNightMode={lateNightMode}
+                onCompletionPress={onCompletionPress}
                 onOpenDetails={onOpenDetails}
                 onRename={onRename}
                 onTogglePin={onTogglePin}
@@ -696,7 +742,14 @@ function TaskSection({
   );
 }
 
-function TaskRow({ task, onComplete, onOpenDetails, onRename, onTogglePin }) {
+function TaskRow({
+  task,
+  lateNightMode,
+  onCompletionPress,
+  onOpenDetails,
+  onRename,
+  onTogglePin,
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftName, setDraftName] = useState("");
 
@@ -719,7 +772,9 @@ function TaskRow({ task, onComplete, onOpenDetails, onRename, onTogglePin }) {
       layout
       whileHover={{ y: -4 }}
       transition={SPRING}
-      className="glass-card rounded-2xl p-4"
+      className={`glass-card rounded-2xl p-4 ${
+        lateNightMode && !task.completedToday ? "task-at-risk" : ""
+      }`}
       data-active={task.completedToday ? "true" : "false"}
     >
       <div className="flex items-start gap-3">
@@ -780,7 +835,7 @@ function TaskRow({ task, onComplete, onOpenDetails, onRename, onTogglePin }) {
           type="button"
           whileTap={{ scale: 0.97 }}
           transition={SPRING}
-          onClick={() => onComplete(task.id)}
+          onClick={(event) => onCompletionPress(event, task.id)}
           className={`glass-card flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold ${
             task.completedToday ? "text-emerald-300" : "text-zinc-100"
           }`}

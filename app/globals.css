@@ -221,6 +221,73 @@ body {
   transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
+@keyframes breatheSlow {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.85;
+  }
+}
+
+@keyframes breatheFast {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.75;
+  }
+}
+
+.streak-breathe-slow {
+  animation: breatheSlow 3s ease-in-out infinite;
+}
+
+.streak-breathe-fast {
+  animation: breatheFast 1.2s ease-in-out infinite;
+}
+
+.particle {
+  position: fixed;
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+@keyframes ambientWarm {
+  0% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
+
+.mesh-leak-warm {
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.3) 0%, rgba(251, 146, 60, 0) 70%);
+  animation: ambientWarm 4s ease-in-out infinite;
+}
+
+.task-at-risk {
+  border-color: rgba(251, 146, 60, 0.5) !important;
+  box-shadow: 0 0 12px rgba(251, 146, 60, 0.15);
+  transition: all 0.8s ease;
+}
+
 @media (max-width: 640px) {
   .mesh-leak {
     width: 22rem;

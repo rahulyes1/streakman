@@ -83,6 +83,7 @@ export default function Home() {
   const [comebackState, setComebackState] = useState(getInitialComebackState);
   const [tasks, setTasks] = useState(readStoredTasks);
   const [showScoreDetails, setShowScoreDetails] = useState(false);
+  const [currentHour, setCurrentHour] = useState(null);
   const [totalXP, setTotalXP] = useState(0);
   const [level, setLevel] = useState(1);
   const [freezeTokens, setFreezeTokens] = useState(0);
@@ -157,6 +158,17 @@ export default function Home() {
     return () => window.removeEventListener("tokensUpdated", handleUpdate);
   }, []);
 
+  useEffect(() => {
+    const updateHour = () => setCurrentHour(new Date().getHours());
+    const bootstrapTimer = window.setTimeout(updateHour, 0);
+    const timer = window.setInterval(updateHour, 60000);
+
+    return () => {
+      window.clearTimeout(bootstrapTimer);
+      window.clearInterval(timer);
+    };
+  }, []);
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good Morning \u{1F44B}";
@@ -219,6 +231,12 @@ export default function Home() {
   };
 
   const improvementSuggestions = getImprovementSuggestions();
+  const breatheClass =
+    completedToday >= tasks.length && tasks.length > 0
+      ? ""
+      : currentHour >= 21
+      ? "streak-breathe-fast"
+      : "streak-breathe-slow";
 
   return (
     <>
@@ -235,7 +253,7 @@ export default function Home() {
           <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="glass-card rounded-2xl p-3 text-center">
               <p className="text-xs text-zinc-400">Streak</p>
-              <p className="mt-1 text-2xl font-bold">{currentStreak}</p>
+              <p className={`mt-1 text-2xl font-bold ${breatheClass}`}>{currentStreak}</p>
               <p className="text-xs text-amber-300">{"\u{1F525}"}</p>
             </div>
             <button
