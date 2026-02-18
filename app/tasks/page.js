@@ -1,152 +1,146 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Archive,
+  Check,
+  Flame,
+  Gem,
+  MoreHorizontal,
+  Pin,
+  PinOff,
+  Sparkles,
+  X,
+} from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import FloatingAddButton from "@/components/FloatingAddButton";
 import { initializeDailyReset } from "@/lib/dailyReset";
 
+const SPRING = { type: "spring", stiffness: 400, damping: 30 };
+
 const PREMADE_TASKS = [
-  // Morning Routine
-  { name: "Morning Workout", emoji: "💪" },
-  { name: "Meditation", emoji: "🧘" },
-  { name: "Make Bed", emoji: "🛏️" },
-  { name: "Drink Water", emoji: "💧" },
-  { name: "Cold Shower", emoji: "🚿" },
-  { name: "Journaling", emoji: "📔" },
-
-  // Health & Fitness
-  { name: "10k Steps", emoji: "🚶" },
-  { name: "Gym Session", emoji: "🏋️" },
-  { name: "Yoga", emoji: "🧘‍♀️" },
-  { name: "Running", emoji: "🏃" },
-  { name: "Stretching", emoji: "🤸" },
-  { name: "Track Calories", emoji: "🍽️" },
-
-  // Learning
-  { name: "Read Book", emoji: "📚" },
-  { name: "Learn Language", emoji: "🗣️" },
-  { name: "Online Course", emoji: "💻" },
-  { name: "Practice Coding", emoji: "👨‍💻" },
-  { name: "Watch Tutorial", emoji: "📺" },
-  { name: "Study", emoji: "📖" },
-
-  // Productivity
-  { name: "Plan Day", emoji: "📅" },
-  { name: "Deep Work", emoji: "⚡" },
-  { name: "No Social Media", emoji: "📵" },
-  { name: "Inbox Zero", emoji: "📧" },
-  { name: "Clean Desk", emoji: "🧹" },
-  { name: "Review Goals", emoji: "🎯" },
-
-  // Creativity
-  { name: "Draw/Paint", emoji: "🎨" },
-  { name: "Write", emoji: "✍️" },
-  { name: "Play Music", emoji: "🎸" },
-  { name: "Photography", emoji: "📷" },
-  { name: "Practice Instrument", emoji: "🎹" },
-
-  // Wellness
-  { name: "Sleep 8hrs", emoji: "😴" },
-  { name: "Gratitude Journal", emoji: "🙏" },
-  { name: "No Caffeine PM", emoji: "☕" },
-  { name: "Skin Care", emoji: "🧴" },
-  { name: "Vitamins", emoji: "💊" },
-  { name: "Mindfulness", emoji: "🌸" },
-
-  // Social
-  { name: "Call Family", emoji: "👨‍👩‍👧" },
-  { name: "Text Friend", emoji: "💬" },
-  { name: "Quality Time", emoji: "❤️" },
-  { name: "Help Someone", emoji: "🤝" },
+  { name: "Morning Workout", emoji: "\u{1F4AA}" },
+  { name: "Meditation", emoji: "\u{1F9D8}" },
+  { name: "Read Book", emoji: "\u{1F4DA}" },
+  { name: "Plan Day", emoji: "\u{1F5D3}\uFE0F" },
+  { name: "10k Steps", emoji: "\u{1F6B6}" },
+  { name: "Deep Work", emoji: "\u{26A1}" },
+  { name: "Journal", emoji: "\u{1F4D4}" },
+  { name: "Drink Water", emoji: "\u{1F4A7}" },
+  { name: "Stretching", emoji: "\u{1F938}" },
+  { name: "Track Calories", emoji: "\u{1F37D}\uFE0F" },
+  { name: "No Social Media", emoji: "\u{1F4F5}" },
+  { name: "Sleep 8hrs", emoji: "\u{1F634}" },
 ];
+
+const EMPTY_TASK = {
+  name: "",
+  emoji: "\u{1F4DD}",
+  goalType: "none",
+  goalValue: "",
+  goalUnit: "",
+};
+
+function sortTasks(items) {
+  return [...items].sort((a, b) => {
+    const completedDelta = Number(a.completedToday) - Number(b.completedToday);
+    if (completedDelta !== 0) return completedDelta;
+    return (a.completedAt || 0) - (b.completedAt || 0);
+  });
+}
+
+function formatGoal(task) {
+  if (!task.goalType || task.goalType === "none" || !task.goalValue) return "";
+  if (task.goalType === "intensity") return `Goal: ${task.goalValue}`;
+  if (task.goalUnit) return `Goal: ${task.goalValue} ${task.goalUnit}`;
+  return `Goal: ${task.goalValue}`;
+}
 
 function TasksContent() {
   const searchParams = useSearchParams();
   const [tasks, setTasks] = useState([]);
-  const [selectedTask, setSelectedTask] = useState(null);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newTask, setNewTask] = useState({
-    name: "",
-    emoji: "📝",
-    goalType: "none", // none, amount, time, intensity
-    goalValue: "",
-    goalUnit: ""
-  });
+  const [newTask, setNewTask] = useState(EMPTY_TASK);
   const [freezeTokens, setFreezeTokens] = useState(0);
+  const [popTaskId, setPopTaskId] = useState(null);
+  const openFromQuery = searchParams.get("add") === "true";
+  const isAddModalOpen = showAddModal || openFromQuery;
 
-  // Initialize daily reset system
   useEffect(() => {
     initializeDailyReset();
   }, []);
 
-  // Load tasks
   useEffect(() => {
     const loadTasks = () => {
-      const saved = localStorage.getItem('streakman_tasks');
+      const saved = localStorage.getItem("streakman_tasks");
       if (saved) {
-        setTasks(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setTasks(parsed);
+        return;
       }
+      setTasks([]);
     };
 
     loadTasks();
 
-    // Listen for updates
     const handleUpdate = () => loadTasks();
-    window.addEventListener('tasksUpdated', handleUpdate);
-    return () => window.removeEventListener('tasksUpdated', handleUpdate);
+    window.addEventListener("tasksUpdated", handleUpdate);
+    return () => window.removeEventListener("tasksUpdated", handleUpdate);
   }, []);
 
-  // Load freeze tokens
   useEffect(() => {
     const loadTokens = () => {
-      const tokens = parseInt(localStorage.getItem('streakman_freeze_tokens') || '0');
+      const tokens = parseInt(localStorage.getItem("streakman_freeze_tokens") || "0", 10);
       setFreezeTokens(tokens);
     };
 
     loadTokens();
 
     const handleUpdate = () => loadTokens();
-    window.addEventListener('tokensUpdated', handleUpdate);
-    return () => window.removeEventListener('tokensUpdated', handleUpdate);
+    window.addEventListener("tokensUpdated", handleUpdate);
+    return () => window.removeEventListener("tokensUpdated", handleUpdate);
   }, []);
 
-  // Sync selectedTask with tasks array when tasks change
-  useEffect(() => {
-    if (selectedTask) {
-      const updatedTask = tasks.find(t => t.id === selectedTask.id);
-      if (updatedTask) {
-        setSelectedTask(updatedTask);
-      }
-    }
-  }, [tasks]);
+  const selectedTask = useMemo(
+    () => tasks.find((task) => task.id === selectedTaskId) || null,
+    [tasks, selectedTaskId]
+  );
 
-  // Check if should open add modal from URL
-  useEffect(() => {
-    if (searchParams.get('add') === 'true') {
-      setShowAddModal(true);
-    }
-  }, [searchParams]);
+  const pinnedTasks = useMemo(() => sortTasks(tasks.filter((task) => task.pinned)), [tasks]);
+  const unpinnedTasks = useMemo(() => sortTasks(tasks.filter((task) => !task.pinned)), [tasks]);
 
-  // Save tasks to localStorage
   const saveTasks = (updatedTasks) => {
-    localStorage.setItem('streakman_tasks', JSON.stringify(updatedTasks));
+    localStorage.setItem("streakman_tasks", JSON.stringify(updatedTasks));
     setTasks(updatedTasks);
-    window.dispatchEvent(new Event('tasksUpdated'));
+    window.dispatchEvent(new Event("tasksUpdated"));
   };
 
-  // Add new task
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setNewTask(EMPTY_TASK);
+    if (!openFromQuery) return;
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("add");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  };
+
   const handleAddTask = () => {
-    if (!newTask.name.trim()) return;
+    const cleanName = newTask.name.trim();
+    if (!cleanName) return;
 
     const task = {
       id: Date.now().toString(),
-      name: newTask.name.trim(),
-      emoji: newTask.emoji,
+      name: cleanName,
+      emoji: newTask.emoji || "\u{1F4DD}",
       pinned: false,
       streak: 0,
       bestStreak: 0,
       completedToday: false,
+      completedAt: null,
       lastCompletedDate: null,
       completionHistory: Array(7).fill(false),
       freezeProtected: false,
@@ -156,46 +150,57 @@ function TasksContent() {
     };
 
     saveTasks([...tasks, task]);
-    setNewTask({ name: "", emoji: "📝", goalType: "none", goalValue: "", goalUnit: "" });
-    setShowAddModal(false);
+    closeAddModal();
   };
 
-  // Toggle pin
-  const togglePin = (taskId) => {
-    const pinnedCount = tasks.filter(t => t.pinned).length;
-    const task = tasks.find(t => t.id === taskId);
+  const renameTask = (taskId, nextName) => {
+    const cleanName = nextName.trim();
+    if (!cleanName) return;
 
+    const updated = tasks.map((task) =>
+      task.id === taskId ? { ...task, name: cleanName } : task
+    );
+    saveTasks(updated);
+  };
+
+  const togglePin = (taskId) => {
+    const pinnedCount = tasks.filter((task) => task.pinned).length;
+    const task = tasks.find((item) => item.id === taskId);
+
+    if (!task) return;
     if (!task.pinned && pinnedCount >= 5) {
       alert("Maximum 5 pinned tasks allowed");
       return;
     }
 
-    const updated = tasks.map(t =>
-      t.id === taskId ? { ...t, pinned: !t.pinned } : t
+    const updated = tasks.map((item) =>
+      item.id === taskId ? { ...item, pinned: !item.pinned } : item
     );
     saveTasks(updated);
   };
 
-  // Complete task
   const completeTask = (taskId) => {
-    const updated = tasks.map(task => {
+    let completedNow = false;
+
+    const updated = tasks.map((task) => {
       if (task.id !== taskId) return task;
 
-      // Toggle completion
       if (task.completedToday) {
-        // Uncomplete the task
         const newStreak = Math.max(0, task.streak - 1);
 
-        // Restore XP
-        const currentXP = parseInt(localStorage.getItem('streakman_xp') || '0');
-        localStorage.setItem('streakman_xp', Math.max(0, currentXP - 40).toString());
-        window.dispatchEvent(new Event('xpUpdated'));
+        const currentXP = parseInt(localStorage.getItem("streakman_xp") || "0", 10);
+        localStorage.setItem("streakman_xp", Math.max(0, currentXP - 40).toString());
+        window.dispatchEvent(new Event("xpUpdated"));
 
-        // Update total completions
-        const totalCompletions = parseInt(localStorage.getItem('streakman_total_completions') || '0');
-        localStorage.setItem('streakman_total_completions', Math.max(0, totalCompletions - 1).toString());
+        const totalCompletions = parseInt(
+          localStorage.getItem("streakman_total_completions") || "0",
+          10
+        );
+        localStorage.setItem(
+          "streakman_total_completions",
+          Math.max(0, totalCompletions - 1).toString()
+        );
 
-        // Update completion history
         const history = [...task.completionHistory];
         history.pop();
         history.unshift(false);
@@ -203,444 +208,392 @@ function TasksContent() {
         return {
           ...task,
           completedToday: false,
+          completedAt: null,
           streak: newStreak,
           lastCompletedDate: null,
           completionHistory: history,
         };
-      } else {
-        // Complete the task
-        const newStreak = task.streak + 1;
-        const newBestStreak = Math.max(newStreak, task.bestStreak);
-
-        // Update XP
-        const currentXP = parseInt(localStorage.getItem('streakman_xp') || '0');
-        localStorage.setItem('streakman_xp', (currentXP + 40).toString());
-        window.dispatchEvent(new Event('xpUpdated'));
-
-        // Update total completions
-        const totalCompletions = parseInt(localStorage.getItem('streakman_total_completions') || '0');
-        localStorage.setItem('streakman_total_completions', (totalCompletions + 1).toString());
-
-        // Update completion history
-        const history = [...task.completionHistory];
-        history.shift();
-        history.push(true);
-
-        return {
-          ...task,
-          completedToday: true,
-          streak: newStreak,
-          bestStreak: newBestStreak,
-          lastCompletedDate: new Date().toDateString(),
-          completionHistory: history,
-        };
       }
+
+      completedNow = true;
+      const newStreak = task.streak + 1;
+      const newBestStreak = Math.max(newStreak, task.bestStreak);
+
+      const currentXP = parseInt(localStorage.getItem("streakman_xp") || "0", 10);
+      localStorage.setItem("streakman_xp", (currentXP + 40).toString());
+      window.dispatchEvent(new Event("xpUpdated"));
+
+      const totalCompletions = parseInt(
+        localStorage.getItem("streakman_total_completions") || "0",
+        10
+      );
+      localStorage.setItem("streakman_total_completions", (totalCompletions + 1).toString());
+
+      const history = [...task.completionHistory];
+      history.shift();
+      history.push(true);
+
+      return {
+        ...task,
+        completedToday: true,
+        completedAt: Date.now(),
+        streak: newStreak,
+        bestStreak: newBestStreak,
+        lastCompletedDate: new Date().toDateString(),
+        completionHistory: history,
+      };
     });
 
     saveTasks(updated);
-  };
 
-  // Archive task
-  const archiveTask = (taskId) => {
-    if (window.confirm("Archive this task? You can restore it later.")) {
-      const updated = tasks.filter(t => t.id !== taskId);
-      saveTasks(updated);
-      setSelectedTask(null);
+    if (completedNow) {
+      setPopTaskId(taskId);
+      window.setTimeout(() => {
+        setPopTaskId((current) => (current === taskId ? null : current));
+      }, 420);
     }
   };
 
-  // Freeze/Unfreeze task
   const toggleFreeze = (taskId) => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task) return;
 
     if (!task.freezeProtected) {
-      // Activate freeze
       if (freezeTokens <= 0) {
-        alert("No freeze tokens available! Earn them from the Daily Spin.");
+        alert("No freeze tokens available. Earn them from the Daily Spin.");
         return;
       }
 
-      const updated = tasks.map(t =>
-        t.id === taskId ? { ...t, freezeProtected: true } : t
+      const updated = tasks.map((item) =>
+        item.id === taskId ? { ...item, freezeProtected: true } : item
       );
       saveTasks(updated);
 
-      // Deduct token
-      const newTokens = freezeTokens - 1;
-      localStorage.setItem('streakman_freeze_tokens', newTokens.toString());
-      setFreezeTokens(newTokens);
-      window.dispatchEvent(new Event('tokensUpdated'));
-
-      setSelectedTask({ ...task, freezeProtected: true });
-    } else {
-      // Deactivate freeze (refund token)
-      const updated = tasks.map(t =>
-        t.id === taskId ? { ...t, freezeProtected: false } : t
-      );
-      saveTasks(updated);
-
-      const newTokens = freezeTokens + 1;
-      localStorage.setItem('streakman_freeze_tokens', newTokens.toString());
-      setFreezeTokens(newTokens);
-      window.dispatchEvent(new Event('tokensUpdated'));
-
-      setSelectedTask({ ...task, freezeProtected: false });
+      const nextTokens = freezeTokens - 1;
+      localStorage.setItem("streakman_freeze_tokens", nextTokens.toString());
+      setFreezeTokens(nextTokens);
+      window.dispatchEvent(new Event("tokensUpdated"));
+      return;
     }
-  };
 
-  // Edit task
-  const [editingTask, setEditingTask] = useState(null);
-
-  const saveEdit = () => {
-    if (!editingTask.name.trim()) return;
-
-    const updated = tasks.map(t =>
-      t.id === editingTask.id
-        ? { ...t, name: editingTask.name, emoji: editingTask.emoji }
-        : t
+    const updated = tasks.map((item) =>
+      item.id === taskId ? { ...item, freezeProtected: false } : item
     );
     saveTasks(updated);
-    setEditingTask(null);
-    setSelectedTask(tasks.find(t => t.id === editingTask.id));
+
+    const nextTokens = freezeTokens + 1;
+    localStorage.setItem("streakman_freeze_tokens", nextTokens.toString());
+    setFreezeTokens(nextTokens);
+    window.dispatchEvent(new Event("tokensUpdated"));
   };
 
-  const pinnedTasks = tasks.filter(t => t.pinned);
-  const unpinnedTasks = tasks.filter(t => !t.pinned);
+  const archiveTask = (taskId) => {
+    if (!window.confirm("Archive this task?")) return;
+    const updated = tasks.filter((task) => task.id !== taskId);
+    saveTasks(updated);
+    setSelectedTaskId(null);
+  };
 
   return (
     <>
-      <div className="min-h-screen bg-[#0F172A] text-[#F1F5F9] px-4 py-6 pb-24">
-        <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold">My Streaks</h1>
-            <div className="flex items-center gap-2">
-              <div className="bg-[#60A5FA] text-white text-sm font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                💎 {freezeTokens}
+      <div className="relative min-h-screen overflow-hidden bg-[#0B0B0B] px-4 pb-28 pt-6 text-zinc-100">
+        <div className="mesh-leak mesh-leak-teal" />
+        <div className="mesh-leak mesh-leak-purple" />
+
+        <div className="relative z-10 mx-auto max-w-2xl">
+          <motion.header
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={SPRING}
+            className="mb-6 flex items-start justify-between gap-4"
+          >
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">My Streaks</h1>
+              <p className="mt-1 text-sm text-zinc-400">
+                Fast habits, clean flow, zero-friction check-ins.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <div className="glass-card flex min-h-11 items-center gap-2 rounded-full px-3">
+                <Gem className="h-4 w-4 text-teal-300" />
+                <span className="text-sm font-semibold">{freezeTokens}</span>
               </div>
-              <div className="bg-[#60A5FA] text-white text-sm font-bold px-3 py-1 rounded-full">
-                {tasks.length}
+              <div className="glass-card flex min-h-11 items-center gap-2 rounded-full px-3">
+                <Sparkles className="h-4 w-4 text-purple-300" />
+                <span className="text-sm font-semibold">{tasks.length}</span>
               </div>
             </div>
-          </div>
+          </motion.header>
 
           {tasks.length === 0 ? (
-            /* Empty State */
-            <div className="text-center py-20">
-              <div className="text-6xl mb-4">📝</div>
-              <p className="text-xl text-[#94A3B8] mb-2">No streaks yet!</p>
-              <p className="text-[#64748B]">Tap + to create one</p>
-            </div>
+            <EmptyState />
           ) : (
             <>
-              {/* Pinned Tasks */}
-              {pinnedTasks.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-sm font-semibold text-[#94A3B8] mb-3 uppercase tracking-wide">
-                    Pinned
-                  </h2>
-                  <div className="space-y-2">
-                    {pinnedTasks.map(task => (
-                      <TaskRow
-                        key={task.id}
-                        task={task}
-                        onTogglePin={togglePin}
-                        onComplete={completeTask}
-                        onClick={() => setSelectedTask(task)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* All Tasks */}
-              {unpinnedTasks.length > 0 && (
-                <div>
-                  <h2 className="text-sm font-semibold text-[#94A3B8] mb-3 uppercase tracking-wide">
-                    All Tasks
-                  </h2>
-                  <div className="space-y-2">
-                    {unpinnedTasks.map(task => (
-                      <TaskRow
-                        key={task.id}
-                        task={task}
-                        onTogglePin={togglePin}
-                        onComplete={completeTask}
-                        onClick={() => setSelectedTask(task)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+              <TaskSection
+                title="Pinned"
+                tasks={pinnedTasks}
+                popTaskId={popTaskId}
+                onComplete={completeTask}
+                onOpenDetails={setSelectedTaskId}
+                onRename={renameTask}
+                onTogglePin={togglePin}
+              />
+              <TaskSection
+                title="All Tasks"
+                tasks={unpinnedTasks}
+                popTaskId={popTaskId}
+                onComplete={completeTask}
+                onOpenDetails={setSelectedTaskId}
+                onRename={renameTask}
+                onTogglePin={togglePin}
+              />
             </>
           )}
         </div>
       </div>
 
-      {/* Task Detail Modal */}
-      {selectedTask && !editingTask && (
-        <div className="fixed inset-0 glass-effect z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] w-full max-w-md animate-modalSlideUp shadow-2xl">
-            {/* Header */}
-            <div className="p-6 border-b border-[#334155]">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-5xl">{selectedTask.emoji}</span>
-                  <div>
-                    <h2 className="text-2xl font-bold">{selectedTask.name}</h2>
+      <AnimatePresence>
+        {selectedTask && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 px-4 py-6 backdrop-blur-sm"
+            onClick={() => setSelectedTaskId(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={SPRING}
+              onClick={(event) => event.stopPropagation()}
+              className="glass-card mx-auto mt-8 w-full max-w-md rounded-3xl p-6"
+              data-active="true"
+            >
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] text-3xl">
+                    {selectedTask.emoji}
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="truncate text-xl font-bold">{selectedTask.name}</h2>
+                    <p className="mt-1 text-sm text-zinc-400">7 day momentum tracker</p>
                   </div>
                 </div>
                 <button
-                  onClick={() => setSelectedTask(null)}
-                  className="text-[#94A3B8] hover:text-[#F1F5F9] text-2xl"
+                  type="button"
+                  onClick={() => setSelectedTaskId(null)}
+                  className="glass-card flex h-11 w-11 items-center justify-center rounded-xl"
+                  aria-label="Close details"
                 >
-                  ×
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
-              {/* Streak Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#0F172A] rounded-lg p-3 text-center">
-                  <p className="text-xs text-[#94A3B8] mb-1">Current Streak</p>
-                  <p className="text-2xl font-bold">
-                    {selectedTask.streak} {selectedTask.streak >= 7 && "🔥"}
-                  </p>
+              <div className="mb-5 grid grid-cols-2 gap-3">
+                <div className="glass-card rounded-2xl p-3 text-center">
+                  <p className="text-xs uppercase tracking-wide text-zinc-400">Current</p>
+                  <p className="mt-1 text-2xl font-bold">{selectedTask.streak}</p>
                 </div>
-                <div className="bg-[#0F172A] rounded-lg p-3 text-center">
-                  <p className="text-xs text-[#94A3B8] mb-1">Best Streak</p>
-                  <p className="text-2xl font-bold">{selectedTask.bestStreak}</p>
+                <div className="glass-card rounded-2xl p-3 text-center">
+                  <p className="text-xs uppercase tracking-wide text-zinc-400">Best</p>
+                  <p className="mt-1 text-2xl font-bold">{selectedTask.bestStreak}</p>
                 </div>
               </div>
-            </div>
 
-            {/* Completion History */}
-            <div className="p-6 border-b border-[#334155]">
-              <p className="text-sm text-[#94A3B8] mb-3">Last 7 Days</p>
-              <div className="flex gap-2">
-                {selectedTask.completionHistory.map((completed, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex-1 h-12 rounded-lg flex items-center justify-center ${
-                      completed ? "bg-[#34D399]" : "bg-[#0F172A]"
-                    }`}
-                  >
-                    <span className="text-2xl">{completed ? "✅" : "❌"}</span>
-                  </div>
-                ))}
+              <div className="mb-6">
+                <p className="mb-2 text-sm text-zinc-400">Last 7 Days</p>
+                <div className="grid grid-cols-7 gap-2">
+                  {selectedTask.completionHistory.map((completed, index) => (
+                    <div
+                      key={index}
+                      className={`flex h-10 items-center justify-center rounded-lg text-xs font-semibold ${
+                        completed ? "bg-emerald-400/20 text-emerald-300" : "bg-white/[0.03] text-zinc-500"
+                      }`}
+                    >
+                      {completed ? "Done" : "Miss"}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="p-6 space-y-3">
-              <button
-                onClick={() => completeTask(selectedTask.id)}
-                className={`w-full py-3 rounded-xl font-semibold transition-spring hover:scale-105 active:scale-95 ${
-                  selectedTask.completedToday
-                    ? "bg-[#34D399] text-white hover:bg-[#10B981]"
-                    : "bg-[#60A5FA] text-white hover:bg-[#3B82F6]"
-                }`}
-              >
-                {selectedTask.completedToday ? "✅ Mark as not done" : "Tap and can be done"}
-              </button>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
                 <button
-                  onClick={() => setEditingTask(selectedTask)}
-                  className="py-2 rounded-lg font-medium bg-[#0F172A] text-[#94A3B8] hover:text-[#F1F5F9] transition-colors"
-                >
-                  ⚙️ Edit
-                </button>
-                <button
-                  onClick={() => togglePin(selectedTask.id)}
-                  className={`py-2 rounded-lg font-medium transition-all hover:scale-105 active:scale-95 ${
-                    selectedTask.pinned
-                      ? "bg-[#60A5FA] text-white shadow-[0_0_12px_rgba(96,165,250,0.6)] hover:shadow-[0_0_16px_rgba(96,165,250,0.8)]"
-                      : "bg-[#0F172A] text-[#94A3B8] hover:text-[#F1F5F9] shadow-[0_0_8px_rgba(148,163,184,0.3)] hover:shadow-[0_0_12px_rgba(148,163,184,0.5)]"
+                  type="button"
+                  onClick={() => completeTask(selectedTask.id)}
+                  className={`glass-card flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold ${
+                    selectedTask.completedToday
+                      ? "text-emerald-300"
+                      : "text-zinc-100 hover:text-teal-200"
                   }`}
                 >
-                  📌 {selectedTask.pinned ? "Unpin" : "Pin"}
+                  <Check className="h-4 w-4" />
+                  {selectedTask.completedToday ? "Mark as not done" : "Mark done"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => togglePin(selectedTask.id)}
+                  className="glass-card flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold"
+                >
+                  {selectedTask.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                  {selectedTask.pinned ? "Unpin task" : "Pin task"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleFreeze(selectedTask.id)}
+                  className="glass-card flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold"
+                >
+                  <Gem className="h-4 w-4 text-teal-300" />
+                  {selectedTask.freezeProtected
+                    ? "Protection active"
+                    : `Freeze (${freezeTokens} token${freezeTokens === 1 ? "" : "s"})`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => archiveTask(selectedTask.id)}
+                  className="glass-card flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-rose-300"
+                >
+                  <Archive className="h-4 w-4" />
+                  Archive task
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isAddModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/55 p-4 backdrop-blur-sm"
+            onClick={closeAddModal}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 28, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.98 }}
+              transition={SPRING}
+              onClick={(event) => event.stopPropagation()}
+              className="glass-card mx-auto max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-3xl p-5 sm:p-6"
+              data-active="true"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold">New Streak</h2>
+                <button
+                  type="button"
+                  className="glass-card flex h-11 w-11 items-center justify-center rounded-xl"
+                  onClick={closeAddModal}
+                  aria-label="Close add modal"
+                >
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
-              <button
-                onClick={() => toggleFreeze(selectedTask.id)}
-                className={`w-full py-2 rounded-lg font-medium transition-colors ${
-                  selectedTask.freezeProtected
-                    ? "bg-[#34D399] text-white"
-                    : "bg-[#0F172A] text-[#94A3B8] hover:text-[#F1F5F9] border border-[#334155]"
-                }`}
-              >
-                💎 {selectedTask.freezeProtected ? "Protected" : `Freeze (${freezeTokens} tokens)`}
-              </button>
-
-              <button
-                onClick={() => archiveTask(selectedTask.id)}
-                className="w-full py-2 rounded-lg font-medium bg-[#0F172A] text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors"
-              >
-                🗑️ Archive Task
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Task Modal */}
-      {editingTask && (
-        <div className="fixed inset-0 glass-effect z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] w-full max-w-md p-6 animate-modalSlideUp shadow-2xl">
-            <h2 className="text-xl font-bold mb-4">Edit Task</h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Emoji</label>
-                <input
-                  type="text"
-                  value={editingTask.emoji}
-                  onChange={(e) =>
-                    setEditingTask({ ...editingTask, emoji: e.target.value })
-                  }
-                  className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 text-2xl text-center"
-                  maxLength={2}
-                />
+              <div className="mb-5">
+                <p className="mb-2 text-xs uppercase tracking-wide text-zinc-400">Quick Add</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {PREMADE_TASKS.map((task) => (
+                    <button
+                      type="button"
+                      key={task.name}
+                      onClick={() => setNewTask((current) => ({ ...current, name: task.name, emoji: task.emoji }))}
+                      className="glass-card flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm"
+                    >
+                      <span>{task.emoji}</span>
+                      <span className="truncate">{task.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Task Name</label>
-                <input
-                  type="text"
-                  value={editingTask.name}
-                  onChange={(e) =>
-                    setEditingTask({ ...editingTask, name: e.target.value })
-                  }
-                  className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
-                  placeholder="Enter task name"
-                />
-              </div>
-            </div>
+              <div className="space-y-4">
+                <label className="block text-sm font-medium">
+                  <span className="mb-2 block text-zinc-300">Emoji</span>
+                  <input
+                    type="text"
+                    value={newTask.emoji}
+                    onChange={(event) => setNewTask((current) => ({ ...current, emoji: event.target.value }))}
+                    className="glass-card h-11 w-full rounded-xl px-3 text-center text-2xl outline-none"
+                    maxLength={2}
+                  />
+                </label>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setEditingTask(null)}
-                className="flex-1 py-3 rounded-xl font-semibold bg-[#0F172A] text-[#94A3B8] hover:border-[#60A5FA] border border-[#334155] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveEdit}
-                className="flex-1 py-3 rounded-xl font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-spring hover:scale-105 active:scale-95"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                <label className="block text-sm font-medium">
+                  <span className="mb-2 block text-zinc-300">Task Title</span>
+                  <input
+                    type="text"
+                    value={newTask.name}
+                    onChange={(event) => setNewTask((current) => ({ ...current, name: event.target.value }))}
+                    className="glass-card h-11 w-full rounded-xl px-3 text-sm outline-none placeholder:text-zinc-500"
+                    placeholder="e.g. Morning Workout"
+                    autoFocus
+                  />
+                </label>
 
-      {/* Add Task Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 glass-effect z-50 flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
-          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] w-full max-w-md p-6 my-8 animate-modalSlideUp shadow-2xl">
-            <h2 className="text-xl font-bold mb-4">New Streak</h2>
-
-            {/* Pre-made Tasks Library */}
-            <div className="mb-6">
-              <p className="text-sm text-[#94A3B8] mb-3">Quick Add:</p>
-              <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto">
-                {PREMADE_TASKS.map((task, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setNewTask({ name: task.name, emoji: task.emoji });
-                    }}
-                    className="bg-[#0F172A] border border-[#334155] rounded-lg p-2 text-left hover:border-[#60A5FA] transition-colors"
+                <label className="block text-sm font-medium">
+                  <span className="mb-2 block text-zinc-300">Goal (Optional)</span>
+                  <select
+                    value={newTask.goalType}
+                    onChange={(event) =>
+                      setNewTask((current) => ({
+                        ...current,
+                        goalType: event.target.value,
+                        goalValue: "",
+                        goalUnit: "",
+                      }))
+                    }
+                    className="glass-card h-11 w-full rounded-xl px-3 text-sm outline-none"
                   >
-                    <span className="text-xl mr-2">{task.emoji}</span>
-                    <span className="text-xs">{task.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="border-t border-[#334155] pt-4 mb-4">
-              <p className="text-sm text-[#94A3B8] mb-3">Or create custom:</p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Emoji</label>
-                <input
-                  type="text"
-                  value={newTask.emoji}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, emoji: e.target.value })
-                  }
-                  className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 text-2xl text-center"
-                  maxLength={2}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Task Name</label>
-                <input
-                  type="text"
-                  value={newTask.name}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, name: e.target.value })
-                  }
-                  className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
-                  placeholder="e.g., Morning Workout"
-                  autoFocus
-                />
-              </div>
-
-              {/* Goal Tracking */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Goal (Optional)</label>
-                <select
-                  value={newTask.goalType}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, goalType: e.target.value, goalValue: "", goalUnit: "" })
-                  }
-                  className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 mb-2"
-                >
-                  <option value="none">No Goal</option>
-                  <option value="amount">Amount (e.g., 10 pages, 5 reps)</option>
-                  <option value="time">Time (e.g., 30 minutes)</option>
-                  <option value="intensity">Intensity Level</option>
-                </select>
+                    <option value="none">No goal</option>
+                    <option value="amount">Amount</option>
+                    <option value="time">Time</option>
+                    <option value="intensity">Intensity</option>
+                  </select>
+                </label>
 
                 {newTask.goalType === "amount" && (
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <input
                       type="number"
                       value={newTask.goalValue}
-                      onChange={(e) => setNewTask({ ...newTask, goalValue: e.target.value })}
+                      onChange={(event) =>
+                        setNewTask((current) => ({ ...current, goalValue: event.target.value }))
+                      }
+                      className="glass-card h-11 rounded-xl px-3 text-sm outline-none placeholder:text-zinc-500"
                       placeholder="10"
-                      className="flex-1 bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
                     />
                     <input
                       type="text"
                       value={newTask.goalUnit}
-                      onChange={(e) => setNewTask({ ...newTask, goalUnit: e.target.value })}
+                      onChange={(event) =>
+                        setNewTask((current) => ({ ...current, goalUnit: event.target.value }))
+                      }
+                      className="glass-card h-11 rounded-xl px-3 text-sm outline-none placeholder:text-zinc-500"
                       placeholder="pages"
-                      className="flex-1 bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
                     />
                   </div>
                 )}
 
                 {newTask.goalType === "time" && (
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <input
                       type="number"
                       value={newTask.goalValue}
-                      onChange={(e) => setNewTask({ ...newTask, goalValue: e.target.value })}
+                      onChange={(event) =>
+                        setNewTask((current) => ({ ...current, goalValue: event.target.value }))
+                      }
+                      className="glass-card h-11 rounded-xl px-3 text-sm outline-none placeholder:text-zinc-500"
                       placeholder="30"
-                      className="flex-1 bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
                     />
                     <select
                       value={newTask.goalUnit}
-                      onChange={(e) => setNewTask({ ...newTask, goalUnit: e.target.value })}
-                      className="flex-1 bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
+                      onChange={(event) =>
+                        setNewTask((current) => ({ ...current, goalUnit: event.target.value }))
+                      }
+                      className="glass-card h-11 rounded-xl px-3 text-sm outline-none"
                     >
                       <option value="">Unit</option>
                       <option value="minutes">Minutes</option>
@@ -652,10 +605,12 @@ function TasksContent() {
                 {newTask.goalType === "intensity" && (
                   <select
                     value={newTask.goalValue}
-                    onChange={(e) => setNewTask({ ...newTask, goalValue: e.target.value, goalUnit: "" })}
-                    className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2"
+                    onChange={(event) =>
+                      setNewTask((current) => ({ ...current, goalValue: event.target.value, goalUnit: "" }))
+                    }
+                    className="glass-card h-11 w-full rounded-xl px-3 text-sm outline-none"
                   >
-                    <option value="">Select Intensity</option>
+                    <option value="">Select intensity</option>
                     <option value="Light">Light</option>
                     <option value="Moderate">Moderate</option>
                     <option value="Intense">Intense</option>
@@ -663,28 +618,27 @@ function TasksContent() {
                   </select>
                 )}
               </div>
-            </div>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setNewTask({ name: "", emoji: "📝", goalType: "none", goalValue: "", goalUnit: "" });
-                }}
-                className="flex-1 py-3 rounded-xl font-semibold bg-[#0F172A] text-[#94A3B8] hover:border-[#60A5FA] border border-[#334155] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddTask}
-                className="flex-1 py-3 rounded-xl font-semibold bg-[#60A5FA] text-white hover:bg-[#3B82F6] transition-spring hover:scale-105 active:scale-95"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="mt-6 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={closeAddModal}
+                  className="glass-card min-h-11 rounded-xl px-3 text-sm font-semibold text-zinc-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddTask}
+                  className="glass-card min-h-11 rounded-xl bg-teal-300/15 px-3 text-sm font-semibold text-teal-200"
+                >
+                  Create streak
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <FloatingAddButton onClick={() => setShowAddModal(true)} />
       <BottomNav />
@@ -692,81 +646,210 @@ function TasksContent() {
   );
 }
 
+function TaskSection({
+  title,
+  tasks,
+  popTaskId,
+  onComplete,
+  onOpenDetails,
+  onRename,
+  onTogglePin,
+}) {
+  if (!tasks.length) return null;
+
+  return (
+    <section className="mb-7">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">{title}</h2>
+      <motion.ul layout className="space-y-3">
+        <AnimatePresence mode="popLayout">
+          {tasks.map((task) => (
+            <motion.li
+              key={task.id}
+              layout
+              initial={{ opacity: 0, y: 16 }}
+              animate={
+                popTaskId === task.id && task.completedToday
+                  ? { opacity: 1, y: 0, scale: [1, 1.05, 1] }
+                  : { opacity: 1, y: 0, scale: 1 }
+              }
+              exit={{ opacity: 0, y: -10 }}
+              transition={SPRING}
+            >
+              <TaskRow
+                task={task}
+                onComplete={onComplete}
+                onOpenDetails={onOpenDetails}
+                onRename={onRename}
+                onTogglePin={onTogglePin}
+              />
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </motion.ul>
+    </section>
+  );
+}
+
+function TaskRow({ task, onComplete, onOpenDetails, onRename, onTogglePin }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftName, setDraftName] = useState("");
+
+  const submitRename = () => {
+    const cleanName = draftName.trim();
+    if (!cleanName) {
+      setDraftName("");
+      setIsEditing(false);
+      return;
+    }
+    if (cleanName !== task.name) {
+      onRename(task.id, cleanName);
+    }
+    setDraftName("");
+    setIsEditing(false);
+  };
+
+  return (
+    <motion.article
+      layout
+      whileHover={{ y: -4 }}
+      transition={SPRING}
+      className="glass-card rounded-2xl p-4"
+      data-active={task.completedToday ? "true" : "false"}
+    >
+      <div className="flex items-start gap-3">
+        <div className="glass-card flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-2xl">
+          {task.emoji}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          {isEditing ? (
+            <input
+              value={draftName}
+              onChange={(event) => setDraftName(event.target.value)}
+              onBlur={submitRename}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") submitRename();
+                if (event.key === "Escape") {
+                  setDraftName("");
+                  setIsEditing(false);
+                }
+              }}
+              className="glass-card h-11 w-full rounded-xl px-3 text-base font-semibold outline-none"
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setDraftName(task.name);
+                setIsEditing(true);
+              }}
+              className={`flex min-h-11 w-full items-center rounded-xl px-1 text-left text-base font-semibold ${
+                task.completedToday ? "text-zinc-400 line-through" : "text-zinc-100"
+              }`}
+              aria-label={`Edit title for ${task.name}`}
+            >
+              <span className="truncate">{task.name}</span>
+            </button>
+          )}
+
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+            <span className="inline-flex items-center gap-1">
+              <Flame className="h-3.5 w-3.5 text-amber-300" />
+              {task.streak} {task.streak === 1 ? "day" : "days"}
+            </span>
+            {task.freezeProtected && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-teal-300/15 px-2 py-1 text-teal-200">
+                <Gem className="h-3 w-3" />
+                Protected
+              </span>
+            )}
+            {formatGoal(task) && <span>{formatGoal(task)}</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2">
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.97 }}
+          transition={SPRING}
+          onClick={() => onComplete(task.id)}
+          className={`glass-card flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold ${
+            task.completedToday ? "text-emerald-300" : "text-zinc-100"
+          }`}
+        >
+          <Check className="h-4 w-4" />
+          {task.completedToday ? "Done" : "Mark done"}
+        </motion.button>
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.96 }}
+          transition={SPRING}
+          onClick={() => onTogglePin(task.id)}
+          className={`glass-card flex h-11 w-11 items-center justify-center rounded-xl ${
+            task.pinned ? "text-teal-200" : "text-zinc-300"
+          }`}
+          aria-label={task.pinned ? "Unpin task" : "Pin task"}
+        >
+          {task.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+        </motion.button>
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.96 }}
+          transition={SPRING}
+          onClick={() => onOpenDetails(task.id)}
+          className="glass-card flex h-11 w-11 items-center justify-center rounded-xl text-zinc-300"
+          aria-label="Open details"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </motion.button>
+      </div>
+    </motion.article>
+  );
+}
+
+function EmptyState() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={SPRING}
+      className="glass-card rounded-3xl p-8 text-center"
+      data-active="true"
+    >
+      <div className="mx-auto mb-4 h-40 w-40 text-zinc-500">
+        <svg viewBox="0 0 220 220" fill="none" className="h-full w-full">
+          <defs>
+            <linearGradient id="emptyGlow" x1="0" y1="0" x2="220" y2="220">
+              <stop stopColor="#5EEAD4" stopOpacity="0.45" />
+              <stop offset="1" stopColor="#A78BFA" stopOpacity="0.25" />
+            </linearGradient>
+          </defs>
+          <circle cx="110" cy="110" r="80" stroke="url(#emptyGlow)" strokeWidth="1.5" />
+          <rect x="70" y="66" width="80" height="98" rx="16" stroke="url(#emptyGlow)" strokeWidth="1.5" />
+          <path d="M86 94h48M86 112h48M86 130h30" stroke="url(#emptyGlow)" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="154" cy="152" r="16" fill="url(#emptyGlow)" fillOpacity="0.2" />
+          <path d="M148 152l4 4 8-10" stroke="#CCFBF1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+      <h2 className="text-xl font-bold">No streaks yet</h2>
+      <p className="mt-2 text-sm text-zinc-400">Tap + to create your first habit streak.</p>
+    </motion.div>
+  );
+}
+
 export default function TasksPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
-        <p className="text-[#94A3B8] text-lg">Loading...</p>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[#0B0B0B] text-zinc-400">
+          Loading tasks...
+        </div>
+      }
+    >
       <TasksContent />
     </Suspense>
   );
 }
 
-// Task Row Component
-function TaskRow({ task, onTogglePin, onComplete, onClick }) {
-  return (
-    <div
-      className={`bg-[#1E293B] rounded-xl border p-4 transition-spring hover:scale-[1.02] active:scale-[0.98] ${
-        task.completedToday
-          ? "border-[#34D399] shadow-lg shadow-[#34D399]/20"
-          : "border-[#334155] hover:border-[#60A5FA]/30 hover:shadow-md"
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        <span className="text-3xl">{task.emoji}</span>
-
-        <div className="flex-1 cursor-pointer" onClick={onClick}>
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold">{task.name}</h3>
-            {task.freezeProtected && (
-              <span className="text-xs px-2 py-0.5 bg-[#34D399]/20 text-[#34D399] rounded-full border border-[#34D399]/30">
-                💎
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-[#94A3B8]">
-              🔥 {task.streak} {task.streak === 1 ? "day" : "days"}
-            </p>
-            {task.goalType && task.goalType !== "none" && (
-              <span className="text-xs text-[#60A5FA]">
-                • Goal: {task.goalValue} {task.goalUnit || task.goalValue}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onComplete(task.id);
-          }}
-          className={`px-4 py-2 rounded-lg font-semibold transition-spring hover:scale-105 active:scale-95 text-sm ${
-            task.completedToday
-              ? "bg-[#34D399] text-white hover:bg-[#10B981]"
-              : "bg-[#60A5FA] text-white hover:bg-[#3B82F6]"
-          }`}
-        >
-          {task.completedToday ? "✅ Done" : "✓ Done"}
-        </button>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onTogglePin(task.id);
-          }}
-          className={`text-sm px-2 py-1 rounded-lg transition-all hover:scale-110 active:scale-95 ${
-            task.pinned
-              ? "text-[#60A5FA] bg-[#60A5FA]/20 shadow-[0_0_12px_rgba(96,165,250,0.6)] hover:shadow-[0_0_16px_rgba(96,165,250,0.8)]"
-              : "text-[#94A3B8] bg-[#1E293B] hover:bg-[#334155] shadow-[0_0_8px_rgba(148,163,184,0.3)] hover:shadow-[0_0_12px_rgba(148,163,184,0.5)]"
-          }`}
-          title={task.pinned ? "Unpin task" : "Pin task"}
-        >
-          📌
-        </button>
-      </div>
-    </div>
-  );
-}

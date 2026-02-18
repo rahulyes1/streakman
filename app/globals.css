@@ -1,17 +1,28 @@
 @import "tailwindcss";
 
-body {
-  background-color: #0F172A;
-  color: #F1F5F9;
+:root {
+  --streak-bg: #0b0b0b;
+  --glass-fill: rgba(255, 255, 255, 0.03);
+  --glass-edge-start: rgba(255, 255, 255, 0.1);
+  --glass-edge-end: rgba(255, 255, 255, 0.01);
 }
 
-/* Apple-style smooth transitions */
+html {
+  scroll-behavior: smooth;
+  background: var(--streak-bg);
+}
+
+body {
+  min-height: 100%;
+  background-color: var(--streak-bg);
+  color: #f4f4f5;
+}
+
 * {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Liquid Glass Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -98,25 +109,86 @@ body {
   animation: spin-slow 2s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-/* Liquid Glass Effect */
+@keyframes meshDrift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(14px, -10px, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(-10px, 12px, 0) scale(1);
+  }
+}
+
+.mesh-leak {
+  position: absolute;
+  width: 34rem;
+  height: 34rem;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(72px);
+  mix-blend-mode: screen;
+  opacity: 0.35;
+  animation: meshDrift 18s ease-in-out infinite alternate;
+  z-index: 0;
+}
+
+.mesh-leak-teal {
+  top: -14rem;
+  left: -10rem;
+  background: radial-gradient(circle, rgba(45, 212, 191, 0.4) 0%, rgba(45, 212, 191, 0) 70%);
+}
+
+.mesh-leak-purple {
+  right: -9rem;
+  bottom: -16rem;
+  animation-delay: -6s;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.34) 0%, rgba(167, 139, 250, 0) 70%);
+}
+
+.glass-card {
+  position: relative;
+  border-radius: 1rem;
+  border: 1px solid transparent;
+  background: var(--glass-fill);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.glass-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--glass-edge-start), var(--glass-edge-end));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.62;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.glass-card:hover::before,
+.glass-card[data-active="true"]::before {
+  opacity: 1;
+}
+
 .glass-effect {
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  background-color: rgba(30, 41, 59, 0.75);
+  background-color: rgba(8, 8, 8, 0.75);
 }
 
 .glass-effect-light {
   backdrop-filter: blur(12px) saturate(150%);
   -webkit-backdrop-filter: blur(12px) saturate(150%);
-  background-color: rgba(30, 41, 59, 0.5);
+  background-color: rgba(8, 8, 8, 0.5);
 }
 
-/* Smooth scroll */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Enhanced transitions */
 .transition-spring {
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -124,3 +196,17 @@ html {
 .transition-bounce {
   transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
+
+@media (max-width: 640px) {
+  .mesh-leak {
+    width: 22rem;
+    height: 22rem;
+    filter: blur(60px);
+  }
+
+  .glass-card {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+

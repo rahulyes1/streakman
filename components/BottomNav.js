@@ -3,20 +3,21 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChartNoAxesColumn, ListTodo, Settings, TrendingUp } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/", icon: "📊", label: "Marks" },
-  { href: "/tasks", icon: "📝", label: "Tasks" },
-  { href: "/progress", icon: "📈", label: "Progress" },
-  { href: "/settings", icon: "⚙️", label: "Settings" },
+  { href: "/", Icon: ChartNoAxesColumn, label: "Marks" },
+  { href: "/tasks", Icon: ListTodo, label: "Tasks" },
+  { href: "/progress", Icon: TrendingUp, label: "Progress" },
+  { href: "/settings", Icon: Settings, label: "Settings" },
 ];
 
 function BottomNavContent() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 glass-effect border-t border-[#334155] z-40 animate-slideUp">
-      <div className="flex items-center justify-around h-[70px] max-w-2xl mx-auto px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/45 backdrop-blur-xl">
+      <div className="mx-auto flex h-[72px] max-w-2xl items-center justify-around px-2">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;
 
@@ -24,12 +25,14 @@ function BottomNavContent() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center gap-1 rounded-lg transition-spring hover:scale-105 active:scale-95 px-3 py-2 ${
-                isActive ? "text-[#60A5FA] scale-105" : "text-[#94A3B8] hover:text-[#F1F5F9]"
+              className={`flex min-h-11 min-w-[68px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-1 text-xs font-medium transition-spring ${
+                isActive
+                  ? "text-teal-200"
+                  : "text-zinc-400 hover:text-zinc-100"
               }`}
             >
-              <span className="text-2xl">{item.icon}</span>
-              <span className="font-medium text-xs">{item.label}</span>
+              <item.Icon className="h-5 w-5" strokeWidth={2.2} />
+              <span>{item.label}</span>
             </Link>
           );
         })}
@@ -40,10 +43,11 @@ function BottomNavContent() {
 
 export default function BottomNav() {
   return (
-    <Suspense fallback={
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#1E293B] border-t border-[#334155] z-40 h-[70px]" />
-    }>
+    <Suspense
+      fallback={<nav className="fixed bottom-0 left-0 right-0 z-40 h-[72px] bg-black/70" />}
+    >
       <BottomNavContent />
     </Suspense>
   );
 }
+

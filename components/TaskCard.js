@@ -1,58 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function TaskCard({ task, onComplete, onCustomize, onFreeze, onDelete }) {
-  const [minimalMode, setMinimalMode] = useState(false);
-  const difficultyKeys = ['easy', 'normal', 'hard', 'extreme'];
+  const [minimalMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const saved = localStorage.getItem("minimalMode");
+    return saved ? JSON.parse(saved) : false;
+  });
 
-  // Load minimal mode setting
-  useEffect(() => {
-    const savedMinimal = localStorage.getItem("minimalMode");
-    if (savedMinimal) {
-      setMinimalMode(JSON.parse(savedMinimal));
-    }
-  }, []);
+  const difficultyKeys = ["easy", "normal", "hard", "extreme"];
 
   function getDifficultyDisplay(key) {
     const diff = task.difficulties[key];
-
-    if (task.customized && diff.customLabel) {
-      return diff.customLabel;
-    }
-
-    if (diff.customLabel) {
-      return diff.customLabel;
-    }
-
+    if (task.customized && diff.customLabel) return diff.customLabel;
+    if (diff.customLabel) return diff.customLabel;
     return diff.label;
   }
 
   function handleComplete() {
-    // Allow toggling - no longer block if completedToday
     if (minimalMode) {
-      // In minimal mode, award fixed 50 XP
       onComplete(task.id, 50);
-    } else {
-      const points = task.difficulties[task.selectedDifficulty].points;
-      onComplete(task.id, points);
+      return;
     }
+    const points = task.difficulties[task.selectedDifficulty].points;
+    onComplete(task.id, points);
   }
 
   function getStreakDisplay() {
     const streak = task.streak;
     if (streak === 0) return "No streak";
-    if (streak >= 30) return `${streak} days 🔥🔥🔥`;
-    if (streak >= 14) return `${streak} days 🔥🔥`;
-    if (streak >= 7) return `${streak} days 🔥`;
+    if (streak >= 30) return `${streak} days`;
+    if (streak >= 14) return `${streak} days`;
+    if (streak >= 7) return `${streak} days`;
     return `${streak} days`;
   }
 
   return (
-    <div className="bg-[#1E293B] rounded-xl border border-[#334155] p-4 relative transition-spring hover:border-[#60A5FA]/30 hover:shadow-lg">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 flex-1">
+    <div className="relative rounded-xl border border-[#334155] bg-[#1E293B] p-4 transition-spring hover:border-[#60A5FA]/30 hover:shadow-lg">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex flex-1 items-center gap-2">
           <span className="text-2xl">{task.emoji}</span>
           <div className="flex-1">
             <h2 className="text-base font-semibold">{task.name}</h2>
@@ -61,66 +48,58 @@ export default function TaskCard({ task, onComplete, onCustomize, onFreeze, onDe
         </div>
 
         <div className="flex items-center gap-1">
-          {/* Freeze/Protected Badge */}
           {task.streak > 0 && onFreeze && !task.freezeProtected && (
             <button
               onClick={() => onFreeze(task.id)}
-              className="text-xs bg-[#60A5FA]/20 text-[#60A5FA] px-2 py-1 rounded-md hover:bg-[#60A5FA]/30 transition-colors"
+              className="rounded-md bg-[#60A5FA]/20 px-2 py-1 text-xs text-[#60A5FA] transition-colors hover:bg-[#60A5FA]/30"
               title="Use freeze token"
             >
-              💎
+              Freeze
             </button>
           )}
           {task.freezeProtected && (
-            <span className="text-xs bg-[#34D399]/20 text-[#34D399] px-2 py-1 rounded-md">
-              🛡️
-            </span>
+            <span className="rounded-md bg-[#34D399]/20 px-2 py-1 text-xs text-[#34D399]">Shield</span>
           )}
 
-          {/* Customize Button (only in non-minimal mode) */}
           {!minimalMode && (
             <button
               onClick={() => onCustomize(task)}
-              className="text-[#94A3B8] hover:text-[#60A5FA] transition-colors p-1"
+              className="p-1 text-[#94A3B8] transition-colors hover:text-[#60A5FA]"
               title="Customize"
             >
-              <span className="text-base">⚙️</span>
+              Edit
             </button>
           )}
 
-          {/* Delete Button */}
           {onDelete && (
             <button
               onClick={() => onDelete(task.id)}
-              className="text-[#94A3B8] hover:text-[#EF4444] transition-colors p-1"
+              className="p-1 text-[#94A3B8] transition-colors hover:text-[#EF4444]"
               title="Remove task"
             >
-              <span className="text-base">×</span>
+              X
             </button>
           )}
         </div>
       </div>
 
       {task.completedToday ? (
-        /* Completed State - Can toggle back */}
         <button
           onClick={handleComplete}
-          className="w-full py-2 px-3 rounded-lg font-semibold text-sm bg-[#34D399] text-white hover:bg-[#10B981] transition-spring hover:scale-105 active:scale-95"
+          className="w-full rounded-lg bg-[#34D399] px-3 py-2 text-sm font-semibold text-white transition-spring hover:scale-105 hover:bg-[#10B981] active:scale-95"
         >
-          ✅ Mark as not done
+          Mark as not done
         </button>
       ) : minimalMode ? (
-        /* Minimal Mode - Just Complete Button */}
         <button
           onClick={handleComplete}
-          className="w-full py-2 rounded-lg font-semibold text-sm transition-spring bg-[#60A5FA] text-white hover:bg-[#3B82F6] hover:scale-105 active:scale-95 hover:shadow-lg"
+          className="w-full rounded-lg bg-[#60A5FA] py-2 text-sm font-semibold text-white transition-spring hover:scale-105 hover:bg-[#3B82F6] hover:shadow-lg active:scale-95"
         >
-          Tap and can be done
+          Mark done
         </button>
       ) : (
         <>
-          {/* Difficulty Buttons - Compact 2x2 Grid */}
-          <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="mb-2 grid grid-cols-2 gap-2">
             {difficultyKeys.map((key) => {
               const isSelected = task.selectedDifficulty === key;
               const label = getDifficultyDisplay(key);
@@ -130,14 +109,14 @@ export default function TaskCard({ task, onComplete, onCustomize, onFreeze, onDe
                 <button
                   key={key}
                   onClick={() => onComplete(task.id, 0, key)}
-                  className={`py-2 px-2 rounded-lg text-left transition-spring hover:scale-105 active:scale-95 ${
+                  className={`rounded-lg px-2 py-2 text-left transition-spring hover:scale-105 active:scale-95 ${
                     isSelected
                       ? "bg-[#60A5FA] text-white shadow-lg"
-                      : "bg-[#0F172A] text-[#94A3B8] border border-[#334155] hover:border-[#60A5FA]/50"
+                      : "border border-[#334155] bg-[#0F172A] text-[#94A3B8] hover:border-[#60A5FA]/50"
                   }`}
                 >
                   <div className="text-xs font-medium capitalize">{key}</div>
-                  <div className={`text-xs ${isSelected ? "text-white/80" : "text-[#64748B]"} truncate`}>
+                  <div className={`truncate text-xs ${isSelected ? "text-white/80" : "text-[#64748B]"}`}>
                     {label}
                   </div>
                   <div className={`text-xs font-semibold ${isSelected ? "text-white" : "text-[#60A5FA]"}`}>
@@ -148,15 +127,15 @@ export default function TaskCard({ task, onComplete, onCustomize, onFreeze, onDe
             })}
           </div>
 
-          {/* Mark Complete Button - Compact */}
           <button
             onClick={handleComplete}
-            className="w-full py-2 rounded-lg font-semibold text-sm transition-spring bg-[#60A5FA] text-white hover:bg-[#3B82F6] hover:scale-105 active:scale-95 hover:shadow-lg"
+            className="w-full rounded-lg bg-[#60A5FA] py-2 text-sm font-semibold text-white transition-spring hover:scale-105 hover:bg-[#3B82F6] hover:shadow-lg active:scale-95"
           >
-            Tap and can be done
+            Mark done
           </button>
         </>
       )}
     </div>
   );
 }
+
