@@ -262,6 +262,157 @@ body {
   z-index: 9999;
 }
 
+@keyframes floatUp {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(-40px);
+  }
+}
+
+.float-xp {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  animation: floatUp 600ms ease-out forwards;
+}
+
+@keyframes rainFall {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes cityUnlock {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes gymPump {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.04);
+  }
+}
+
+@keyframes libraryGlow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgba(94, 234, 212, 0));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(94, 234, 212, 0.7));
+  }
+}
+
+@keyframes homePulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.76;
+  }
+}
+
+@keyframes landmarkGlow {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(251, 191, 36, 0));
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.65));
+  }
+}
+
+.city-weather-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.city-weather-sunny {
+  filter: brightness(1.1);
+}
+
+.city-weather-sunny::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  width: 60%;
+  height: 60%;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.22) 0%, rgba(251, 191, 36, 0) 70%);
+}
+
+.city-weather-cloudy {
+  background: rgba(161, 161, 170, 0.15);
+}
+
+.city-weather-overcast {
+  background: rgba(161, 161, 170, 0.25);
+  backdrop-filter: blur(1px);
+}
+
+.city-weather-rain {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.city-weather-rain::before {
+  content: "";
+  position: absolute;
+  inset: -100% 0 0;
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(191, 219, 254, 0.28) 0 8px,
+    rgba(191, 219, 254, 0) 8px 20px
+  );
+  animation: rainFall 1s linear infinite;
+}
+
+.city-gym {
+  animation: gymPump 1.5s ease-in-out infinite;
+}
+
+.city-library {
+  animation: libraryGlow 2.5s ease-in-out infinite;
+}
+
+.city-home {
+  animation: homePulse 3s ease-in-out infinite;
+}
+
+.city-landmark {
+  animation: landmarkGlow 2s ease-in-out infinite;
+}
+
+.city-unlock {
+  animation: cityUnlock 320ms ease-out both;
+}
+
 @keyframes ambientWarm {
   0% {
     opacity: 0.35;

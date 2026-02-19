@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Archive,
@@ -15,9 +16,14 @@ import {
   X,
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import ComebackScreen from "@/components/ComebackScreen";
 import CompletionParticles from "@/components/CompletionParticles";
+import FloatingXP from "@/components/FloatingXP";
+import { BUILDING_EMOJIS, getBuildingType } from "@/lib/cityEngine";
 import { initializeDailyReset } from "@/lib/dailyReset";
+import { setRecoveryMissionForToday } from "@/lib/dailyMission";
 import { allTasksComplete, taskComplete } from "@/lib/haptics";
+import { addXP, checkStreakMilestoneXP, getLevelFromXP, XP_REWARDS } from "@/lib/xpSystem";
 
 const SPRING = { type: "spring", stiffness: 400, damping: 30 };
 
@@ -59,8 +65,51 @@ function formatGoal(task) {
   return `Goal: ${task.goalValue}`;
 }
 
+function getDaysSince(lastDateString, todayDate) {
+  if (!lastDateString) return 0;
+  const lastDate = new Date(lastDateString);
+  if (Number.isNaN(lastDate.getTime())) return 0;
+
+  const today = new Date(todayDate);
+  lastDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
+function getInitialComebackState() {
+  if (typeof window === "undefined") {
+    return { show: false, daysSince: 0, xp: 0, level: 1 };
+  }
+
+  const today = new Date();
+  const todayString = today.toDateString();
+  const lastActive = localStorage.getItem("streakman_last_active");
+  const daysSince = getDaysSince(lastActive, today);
+
+  let tasks = [];
+  try {
+    const raw = localStorage.getItem("streakman_tasks");
+    const parsed = raw ? JSON.parse(raw) : [];
+    tasks = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    tasks = [];
+  }
+
+  const xp = parseInt(localStorage.getItem("streakman_xp") || "0", 10);
+  const level = getLevelFromXP(xp).level;
+  const show = daysSince >= 3 && tasks.length > 0;
+
+  if (show) {
+    setRecoveryMissionForToday();
+  }
+
+  localStorage.setItem("streakman_last_active", todayString);
+  return { show, daysSince, xp, level };
+}
+
 function TasksContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [tasks, setTasks] = useState([]);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -68,12 +117,25 @@ function TasksContent() {
   const [freezeTokens, setFreezeTokens] = useState(0);
   const [popTaskId, setPopTaskId] = useState(null);
   const [burst, setBurst] = useState(null);
+  const [floatingXP, setFloatingXP] = useState([]);
+  const [firstCompletionTask, setFirstCompletionTask] = useState(null);
+  const [comebackState, setComebackState] = useState(getInitialComebackState);
   const openFromQuery = searchParams.get("add") === "true";
   const isAddModalOpen = showAddModal || openFromQuery;
-  const now = new Date();
-  const isLateNight = now.getHours() === 23 && now.getMinutes() >= 40;
-  const hasIncompleteTasks = tasks.some((task) => !task.completedToday);
-  const lateNightMode = isLateNight && hasIncompleteTasks;
+  const hour = new Date().getHours();
+  const isLateNight = hour === 23 && new Date().getMinutes() >= 40;
+  const lateNightMode = isLateNight && tasks.some((task) => !task.completedToday);
+
+  useEffect(() => {
+    const sessionKey = "streakman_onboarding_checked";
+    if (sessionStorage.getItem(sessionKey)) return;
+    sessionStorage.setItem(sessionKey, "1");
+
+    const hasOnboarded = localStorage.getItem("streakman_onboarded");
+    if (!hasOnboarded) {
+      router.replace("/onboarding");
+    }
+  }, [router]);
 
   useEffect(() => {
     initializeDailyReset();
@@ -268,6 +330,23 @@ function TasksContent() {
       } else {
         taskComplete();
       }
+
+      checkStreakMilestoneXP(nextTasks);
+
+      if (nextTasks.length === 1) {
+        const firstTask = nextTasks[0];
+        const needsCeremony =
+          completedNow &&
+          Boolean(firstTask?.completedToday) &&
+          !localStorage.getItem("streakman_first_complete");
+
+        if (needsCeremony) {
+          addXP(XP_REWARDS.FIRST_EVER_COMPLETION);
+          localStorage.setItem("streakman_first_complete", "true");
+          localStorage.setItem("streakman_onboarded", "true");
+          setFirstCompletionTask(firstTask);
+        }
+      }
     });
 
     if (completedNow) {
@@ -319,11 +398,21 @@ function TasksContent() {
   };
 
   const handleCompletionPress = (event, taskId) => {
+    const task = tasks.find((item) => item.id === taskId);
+    const wasCompleted = Boolean(task?.completedToday);
     const rect = event.currentTarget.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+
     setBurst({
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
+      x,
+      y,
     });
+
+    if (!wasCompleted) {
+      const id = `${Date.now()}-${Math.random()}`;
+      setFloatingXP((current) => [...current, { id, x, y, amount: 40, bonus: false }]);
+    }
 
     completeTask(taskId);
 
@@ -691,7 +780,41 @@ function TasksContent() {
         />
       )}
 
+      {firstCompletionTask && (
+        <FirstCompletionCeremony
+          task={firstCompletionTask}
+          onClose={() => setFirstCompletionTask(null)}
+        />
+      )}
+
+      {comebackState.show && (
+        <ComebackScreen
+          xp={comebackState.xp}
+          level={comebackState.level}
+          daysSince={comebackState.daysSince}
+          onClose={() =>
+            setComebackState((current) => ({
+              ...current,
+              show: false,
+            }))
+          }
+        />
+      )}
+
       <BottomNav />
+
+      {floatingXP.map((item) => (
+        <FloatingXP
+          key={item.id}
+          amount={item.amount}
+          x={item.x}
+          y={item.y}
+          bonus={item.bonus}
+          onDone={() =>
+            setFloatingXP((current) => current.filter((entry) => entry.id !== item.id))
+          }
+        />
+      ))}
     </>
   );
 }
@@ -896,7 +1019,87 @@ function EmptyState() {
       </div>
       <h2 className="text-xl font-bold">No streaks yet</h2>
       <p className="mt-2 text-sm text-zinc-400">Tap + to create your first habit streak.</p>
+      <Link href="/templates" className="mt-3 inline-block text-sm text-teal-200 underline">
+        Browse Templates -&gt;
+      </Link>
     </motion.div>
+  );
+}
+
+function FirstCompletionCeremony({ task, onClose }) {
+  const [population, setPopulation] = useState(0);
+  const [sunny, setSunny] = useState(false);
+  const [burst, setBurst] = useState(() => {
+    if (typeof window === "undefined") return null;
+    return {
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    };
+  });
+  const buildingType = getBuildingType(task?.name);
+  const buildingEmoji = BUILDING_EMOJIS[buildingType] || BUILDING_EMOJIS.default;
+
+  useEffect(() => {
+    const start = performance.now();
+    const duration = 1200;
+    let rafId = 0;
+
+    const tick = (timestamp) => {
+      const ratio = Math.min(1, (timestamp - start) / duration);
+      setPopulation(Math.round(5 * ratio));
+      if (ratio < 1) {
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
+    rafId = requestAnimationFrame(tick);
+
+    const weatherTimer = window.setTimeout(() => setSunny(true), 120);
+    const burstTimer = window.setTimeout(() => setBurst(null), 260);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.clearTimeout(weatherTimer);
+      window.clearTimeout(burstTimer);
+    };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[80] bg-[#0B0B0B]/95 p-4 text-zinc-100">
+      <div
+        className={`absolute inset-0 transition-colors duration-700 ${
+          sunny ? "bg-gradient-to-b from-amber-300/25 to-transparent" : "bg-zinc-500/10"
+        }`}
+      />
+
+      <div className="relative z-10 mx-auto flex min-h-full w-full max-w-lg items-center justify-center">
+        <div className="glass-card w-full rounded-3xl p-6 text-center animate-scaleIn" data-active="true">
+          <p className="text-7xl">{buildingEmoji}</p>
+          <h2 className="mt-3 text-3xl font-bold">Day 1 - Foundation Laid</h2>
+          <p className="mt-2 text-4xl font-bold text-teal-300">+50 XP</p>
+          <p className="mt-2 text-zinc-300">Your city is coming to life.</p>
+          <p className="mt-4 text-sm text-zinc-400">Population {population}</p>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="glass-card mt-6 min-h-11 w-full rounded-xl bg-teal-300/15 px-4 text-sm font-semibold text-teal-200"
+          >
+            Keep Building
+          </button>
+        </div>
+      </div>
+
+      {burst && (
+        <CompletionParticles
+          x={burst.x}
+          y={burst.y}
+          color="#5eead4"
+          active={true}
+          onComplete={() => setBurst(null)}
+        />
+      )}
+    </div>
   );
 }
 

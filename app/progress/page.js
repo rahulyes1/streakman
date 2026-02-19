@@ -1,10 +1,18 @@
-﻿"use client";
+"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import BadgeDisplay from "@/components/BadgeDisplay";
 import BottomNav from "@/components/BottomNav";
+import DailyForge from "@/components/DailyForge";
+import DailyMissionCard from "@/components/DailyMissionCard";
+import MilestoneCelebration from "@/components/MilestoneCelebration";
 import ProgressBar from "@/components/ProgressBar";
+import StreakShieldCard from "@/components/StreakShieldCard";
 import { initializeDailyReset } from "@/lib/dailyReset";
+import { checkMilestones } from "@/lib/milestones";
 import { calculateScore } from "@/lib/scoring";
+import { getLevelFromXP } from "@/lib/xpSystem";
 
 const STATUS_CONFIG = {
   exceptional: { emoji: "\u{1F525}", cellClass: "bg-amber-300/65 text-amber-950", label: "Exceptional" },
@@ -14,27 +22,69 @@ const STATUS_CONFIG = {
   upcoming: { emoji: "\u26AA", cellClass: "bg-white/[0.08] text-zinc-500", label: "Inactive" },
 };
 
-function gradeTone(grade) {
-  if (grade.startsWith("A")) return "text-emerald-300";
-  if (grade.startsWith("B")) return "text-teal-200";
-  if (grade.startsWith("C")) return "text-amber-300";
-  return "text-rose-300";
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning \u{1F44B}";
+  if (hour < 18) return "Good Afternoon \u{1F44B}";
+  return "Good Evening \u{1F44B}";
 }
 
-export default function Progress() {
+function getWeatherEmoji(totalScore) {
+  if (totalScore >= 75) return "\u2600\uFE0F";
+  if (totalScore >= 50) return "\u26C5";
+  if (totalScore >= 25) return "\u2601\uFE0F";
+  return "\u{1F327}\uFE0F";
+}
+
+function getDayCount(firstUseDate) {
+  if (!firstUseDate) return 1;
+  const start = new Date(firstUseDate);
+  const today = new Date();
+  start.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.max(1, Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+}
+
+function readStoredTasks() {
+  if (typeof window === "undefined") return [];
+  const saved = localStorage.getItem("streakman_tasks");
+  if (!saved) return [];
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function readStoredEvent() {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem("streakman_city_event");
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export default function ProgressPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [hoveredDay, setHoveredDay] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [totalXP, setTotalXP] = useState(0);
+  const [freezeTokens, setFreezeTokens] = useState(0);
+  const [cityEvent, setCityEvent] = useState(null);
+  const [milestoneToCelebrate, setMilestoneToCelebrate] = useState(null);
   const [firstUseDate] = useState(() => {
     if (typeof window === "undefined") return null;
-
-    let savedFirstUse = localStorage.getItem("streakman_first_use");
-    if (!savedFirstUse) {
-      savedFirstUse = new Date().toISOString();
-      localStorage.setItem("streakman_first_use", savedFirstUse);
+    let saved = localStorage.getItem("streakman_first_use");
+    if (!saved) {
+      saved = new Date().toISOString();
+      localStorage.setItem("streakman_first_use", saved);
     }
-
-    return new Date(savedFirstUse);
+    return saved;
   });
   const [scoreData, setScoreData] = useState({
     totalScore: 0,
@@ -46,41 +96,84 @@ export default function Progress() {
     },
     grade: "Needs Work",
   });
+  const router = useRouter();
+
   useEffect(() => {
     initializeDailyReset();
   }, []);
 
   useEffect(() => {
     const loadTasks = () => {
-      const saved = localStorage.getItem("streakman_tasks");
-      if (saved) {
-        const parsedTasks = JSON.parse(saved);
-        setTasks(parsedTasks);
-        setScoreData(calculateScore(parsedTasks));
-        return;
-      }
-
-      setTasks([]);
-      setScoreData({
-        totalScore: 0,
-        breakdown: {
-          completionRate: 0,
-          streakStrength: 0,
-          weeklyConsistency: 0,
-          improvementTrend: 0,
-        },
-        grade: "Needs Work",
-      });
+      const parsed = readStoredTasks();
+      setTasks(parsed);
+      setScoreData(calculateScore(parsed));
+      setMilestoneToCelebrate(checkMilestones(parsed));
     };
 
     loadTasks();
 
-    const handleUpdate = () => loadTasks();
-    window.addEventListener("tasksUpdated", handleUpdate);
-    return () => window.removeEventListener("tasksUpdated", handleUpdate);
+    const onTasks = () => loadTasks();
+    window.addEventListener("tasksUpdated", onTasks);
+    return () => window.removeEventListener("tasksUpdated", onTasks);
   }, []);
 
-  const getMomentumData = () => {
+  useEffect(() => {
+    const loadXP = () => {
+      const nextXP = parseInt(localStorage.getItem("streakman_xp") || "0", 10);
+      setTotalXP(nextXP);
+    };
+
+    loadXP();
+
+    const onXP = () => loadXP();
+    window.addEventListener("xpUpdated", onXP);
+    return () => window.removeEventListener("xpUpdated", onXP);
+  }, []);
+
+  useEffect(() => {
+    const loadTokens = () => {
+      setFreezeTokens(parseInt(localStorage.getItem("streakman_freeze_tokens") || "0", 10));
+    };
+
+    loadTokens();
+
+    const onTokens = () => loadTokens();
+    window.addEventListener("tokensUpdated", onTokens);
+    return () => window.removeEventListener("tokensUpdated", onTokens);
+  }, []);
+
+  useEffect(() => {
+    const loadEvent = () => setCityEvent(readStoredEvent());
+    loadEvent();
+    const onTasks = () => loadEvent();
+    window.addEventListener("tasksUpdated", onTasks);
+    return () => window.removeEventListener("tasksUpdated", onTasks);
+  }, []);
+
+  const levelInfo = getLevelFromXP(totalXP);
+  const dayCount = getDayCount(firstUseDate);
+  const completedToday = tasks.filter((task) => task.completedToday).length;
+  const tasksRemaining = Math.max(0, tasks.length - completedToday);
+  const currentStreak = Math.max(...tasks.map((task) => task.streak || 0), 0);
+  const bestStreak = Math.max(...tasks.map((task) => task.bestStreak || 0), 0);
+  const weatherEmoji = getWeatherEmoji(scoreData.totalScore);
+  const hour = new Date().getHours();
+  const breatheClass =
+    completedToday >= tasks.length && tasks.length > 0
+      ? ""
+      : hour >= 21
+      ? "streak-breathe-fast"
+      : "streak-breathe-slow";
+
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    { id: "report", label: "Report" },
+    { id: "stats", label: "Stats" },
+    { id: "forge", label: "Forge" },
+    { id: "badges", label: "Badges" },
+  ];
+
+  const momentumData = useMemo(() => {
     if (!firstUseDate) return [];
 
     const data = [];
@@ -113,7 +206,6 @@ export default function Progress() {
 
       tasks.forEach((task) => {
         if (!task.completionHistory || task.completionHistory.length === 0) return;
-
         const daysDiff = Math.floor((today - date) / (1000 * 60 * 60 * 24));
         if (daysDiff >= 0 && daysDiff < 7 && task.completionHistory[6 - daysDiff]) {
           completedCount += 1;
@@ -144,12 +236,7 @@ export default function Progress() {
     }
 
     return data;
-  };
-
-  const momentumData = getMomentumData();
-  const completedToday = tasks.filter((task) => task.completedToday).length;
-  const gradeClass = gradeTone(scoreData.grade);
-  const bestStreak = Math.max(...tasks.map((task) => task.bestStreak || 0), 0);
+  }, [firstUseDate, tasks]);
 
   const momentumSummary = momentumData.reduce(
     (summary, day) => {
@@ -159,13 +246,6 @@ export default function Progress() {
     { exceptional: 0, perfect: 0, struggled: 0, missed: 0 }
   );
 
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "report", label: "21-Day Report" },
-    { id: "stats", label: "Stats" },
-    { id: "vault", label: "Vault" },
-  ];
-
   return (
     <>
       <div className="relative min-h-screen overflow-hidden bg-[#0B0B0B] px-4 pb-28 pt-6 text-zinc-100">
@@ -173,33 +253,87 @@ export default function Progress() {
         <div className="mesh-leak mesh-leak-purple" />
 
         <div className="relative z-10 mx-auto max-w-4xl">
-          <header className="mb-6">
-            <h1 className="text-3xl font-bold tracking-tight">Progress</h1>
-            <p className="mt-1 text-sm text-zinc-400">Your consistency trends and scoring depth.</p>
+          <header className="mb-5">
+            <h1 className="text-3xl font-bold tracking-tight">{getGreeting()}</h1>
+            <p className="mt-1 text-sm text-zinc-400">Day {dayCount} of your streak</p>
           </header>
+
+          <section className="glass-card mb-5 rounded-3xl p-5" data-active="true">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="text-zinc-300">Level {levelInfo.level}</span>
+              <span className="text-zinc-400">{levelInfo.current} XP</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/[0.07]">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-teal-300 to-purple-300 transition-spring"
+                style={{ width: `${levelInfo.percentage}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-zinc-400">
+              {levelInfo.next ? `${levelInfo.xpToNext} XP to Level ${levelInfo.next}` : "Max level reached"}
+            </p>
+          </section>
 
           <section className="mb-5 grid grid-cols-3 gap-3">
             <div className="glass-card rounded-2xl p-4 text-center">
-              <p className="text-xs text-zinc-400">Total Score</p>
+              <p className="text-xs text-zinc-400">Streak</p>
+              <p className={`mt-1 text-2xl font-bold ${breatheClass}`}>{currentStreak}</p>
+            </div>
+            <div className="glass-card rounded-2xl p-4 text-center">
+              <p className="text-xs text-zinc-400">Freeze Tokens</p>
+              <p className="mt-1 text-2xl font-bold">{freezeTokens}</p>
+            </div>
+            <div className="glass-card rounded-2xl p-4 text-center">
+              <p className="text-xs text-zinc-400">Score</p>
               <p className="mt-1 text-2xl font-bold">{scoreData.totalScore}</p>
-              <p className="text-xs text-zinc-500">/100</p>
-            </div>
-            <div className="glass-card rounded-2xl p-4 text-center">
-              <p className="text-xs text-zinc-400">Grade</p>
-              <p className={`mt-1 text-2xl font-bold ${gradeClass}`}>{scoreData.grade}</p>
-            </div>
-            <div className="glass-card rounded-2xl p-4 text-center">
-              <p className="text-xs text-zinc-400">Today</p>
-              <p className="mt-1 text-2xl font-bold">{completedToday}</p>
-              <p className="text-xs text-zinc-500">/{tasks.length} tasks</p>
             </div>
           </section>
 
+          <div className="mb-5 rounded-3xl bg-gradient-to-r from-teal-300/40 to-purple-300/40 p-[1px]">
+            <section className="glass-card rounded-3xl p-5" data-active="true">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-2xl">{weatherEmoji}</span>
+                <h2 className="text-lg font-semibold">Today in your city</h2>
+              </div>
+              <p className="text-sm text-zinc-300">
+                {cityEvent?.title ? cityEvent.title : "No city event active right now."}
+              </p>
+              <p className="mt-2 text-sm text-zinc-400">{tasksRemaining} tasks remaining today</p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.push("/tasks")}
+                  className="glass-card min-h-11 rounded-xl px-3 text-sm font-semibold text-zinc-100"
+                >
+                  Start Tasks
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/city")}
+                  className="glass-card min-h-11 rounded-xl px-3 text-sm font-semibold text-zinc-100"
+                >
+                  Open City
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <DailyMissionCard />
+          <StreakShieldCard />
+
+          <div className="mb-5">
+            <DailyForge />
+          </div>
+
+          <section className="glass-card mb-5 rounded-3xl p-5">
+            <h2 className="mb-3 text-lg font-semibold">Recent Badges</h2>
+            <BadgeDisplay compact={true} />
+          </section>
+
           <div className="glass-card mb-5 overflow-x-auto rounded-2xl">
-            <div className="flex min-w-[440px]">
+            <div className="flex min-w-[560px]">
               {tabs.map((tab) => {
                 const isActive = activeTab === tab.id;
-
                 return (
                   <button
                     key={tab.id}
@@ -248,12 +382,6 @@ export default function Progress() {
                       color="bg-gradient-to-r from-purple-300 to-fuchsia-300"
                     />
                   </div>
-
-                  <div className="mt-6 rounded-2xl border border-teal-300/30 bg-gradient-to-r from-teal-300/10 to-purple-300/10 p-5 text-center">
-                    <p className="text-sm text-zinc-400">Overall Score</p>
-                    <p className="mt-1 text-5xl font-bold">{scoreData.totalScore}/100</p>
-                    <p className={`text-xl font-semibold ${gradeClass}`}>{scoreData.grade}</p>
-                  </div>
                 </div>
 
                 <div>
@@ -261,7 +389,6 @@ export default function Progress() {
                   <div className="grid grid-cols-7 gap-2">
                     {momentumData.map((day, idx) => {
                       const config = STATUS_CONFIG[day.status];
-
                       return (
                         <div
                           key={`${day.date}-${day.day}`}
@@ -289,20 +416,6 @@ export default function Progress() {
                       );
                     })}
                   </div>
-
-                  <div className="mt-4 flex flex-wrap gap-3 text-xs">
-                    {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                      <div key={key} className="flex items-center gap-1 text-zinc-400">
-                        <span>{config.emoji}</span>
-                        <span>{config.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-purple-300/30 bg-gradient-to-r from-purple-300/10 to-teal-300/10 p-4">
-                  <p className="text-sm text-zinc-400">Current Combo</p>
-                  <p className="mt-1 text-lg font-bold">{bestStreak} day best streak</p>
                 </div>
               </div>
             )}
@@ -324,22 +437,34 @@ export default function Progress() {
                 <SummaryCard label="Tracked Tasks" value={tasks.length} />
                 <SummaryCard label="Completed Today" value={completedToday} />
                 <SummaryCard label="Best Streak" value={bestStreak} />
-                <SummaryCard label="Completion Rate" value={`${Math.round((completedToday / (tasks.length || 1)) * 100)}%`} />
-                <SummaryCard label="Grade" value={scoreData.grade} tone={gradeClass} />
+                <SummaryCard
+                  label="Completion Rate"
+                  value={`${Math.round((completedToday / (tasks.length || 1)) * 100)}%`}
+                />
+                <SummaryCard label="Grade" value={scoreData.grade} />
                 <SummaryCard label="Score" value={`${scoreData.totalScore}/100`} />
               </div>
             )}
 
-            {activeTab === "vault" && (
-              <div className="flex min-h-[320px] items-center justify-center text-zinc-500">
-                Deeper analytics vault is coming soon.
+            {activeTab === "forge" && (
+              <div className="mx-auto max-w-xl">
+                <DailyForge />
               </div>
             )}
+
+            {activeTab === "badges" && <BadgeDisplay compact={false} />}
           </section>
         </div>
       </div>
 
       <BottomNav />
+
+      {milestoneToCelebrate && (
+        <MilestoneCelebration
+          milestone={milestoneToCelebrate}
+          onClose={() => setMilestoneToCelebrate(checkMilestones(tasks))}
+        />
+      )}
     </>
   );
 }

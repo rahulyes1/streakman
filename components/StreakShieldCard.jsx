@@ -1,20 +1,22 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 function readTasks() {
   if (typeof window === "undefined") return [];
-
-  const saved = localStorage.getItem("streakman_tasks");
-  if (!saved) return [];
-
+  const raw = localStorage.getItem("streakman_tasks");
+  if (!raw) return [];
   try {
-    const parsed = JSON.parse(saved);
+    const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
+}
+
+function todayKey() {
+  return new Date().toDateString();
 }
 
 function readTokens() {
@@ -22,114 +24,95 @@ function readTokens() {
   return parseInt(localStorage.getItem("streakman_freeze_tokens") || "0", 10);
 }
 
-function todayString() {
-  return new Date().toDateString();
-}
-
-function buildShieldState() {
-  if (typeof window === "undefined") {
-    return {
-      tasks: [],
-      freezeTokens: 0,
-      hour: 0,
-      protectedToday: false,
-    };
-  }
-
-  return {
-    tasks: readTasks(),
-    freezeTokens: readTokens(),
-    hour: new Date().getHours(),
-    protectedToday: localStorage.getItem("streakman_shield_used") === todayString(),
-  };
-}
-
 export default function StreakShieldCard() {
-  const [shieldState, setShieldState] = useState(buildShieldState);
+  const [tasks, setTasks] = useState(() => readTasks());
+  const [freezeTokens, setFreezeTokens] = useState(() => readTokens());
+  const [hour, setHour] = useState(() => new Date().getHours());
+  const [usedToday, setUsedToday] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("streakman_shield_used") === todayKey();
+  });
   const router = useRouter();
 
-  const refresh = () => {
-    setShieldState(buildShieldState());
-  };
-
   useEffect(() => {
-    const handleTasks = () => refresh();
-    const handleTokens = () => refresh();
-    const bootstrapTimer = window.setTimeout(refresh, 0);
+    const refresh = () => {
+      setTasks(readTasks());
+      setFreezeTokens(readTokens());
+      setHour(new Date().getHours());
+      setUsedToday(localStorage.getItem("streakman_shield_used") === todayKey());
+    };
 
-    window.addEventListener("tasksUpdated", handleTasks);
-    window.addEventListener("tokensUpdated", handleTokens);
+    const onTasks = () => refresh();
+    const onTokens = () => refresh();
+    const timer = window.setInterval(() => refresh(), 60000);
 
-    const timer = window.setInterval(() => {
-      refresh();
-    }, 60000);
-
+    window.addEventListener("tasksUpdated", onTasks);
+    window.addEventListener("tokensUpdated", onTokens);
     return () => {
-      window.removeEventListener("tasksUpdated", handleTasks);
-      window.removeEventListener("tokensUpdated", handleTokens);
-      window.clearTimeout(bootstrapTimer);
+      window.removeEventListener("tasksUpdated", onTasks);
+      window.removeEventListener("tokensUpdated", onTokens);
       window.clearInterval(timer);
     };
   }, []);
 
-  const tasks = shieldState.tasks;
-  const freezeTokens = shieldState.freezeTokens;
-  const hour = shieldState.hour;
-  const protectedToday = shieldState.protectedToday;
-  const longestStreak = useMemo(() => Math.max(...tasks.map((task) => task.streak || 0), 0), [tasks]);
-  const hasIncompleteTask = tasks.some((task) => !task.completedToday);
-  const baseRiskWindow = longestStreak >= 3 && hour >= 20 && hasIncompleteTask;
-  const showProtected = baseRiskWindow && protectedToday;
-  const showAtRisk = baseRiskWindow && !protectedToday && freezeTokens >= 1;
+  const bestStreak = useMemo(
+    () => Math.max(...tasks.map((task) => Number(task?.bestStreak || 0)), 0),
+    [tasks]
+  );
+  const longestActiveStreak = useMemo(
+    () => Math.max(...tasks.map((task) => Number(task?.streak || 0)), 0),
+    [tasks]
+  );
+  const hasIncomplete = tasks.some((task) => !task.completedToday);
+  const riskWindow = bestStreak >= 3 && hour >= 20 && hasIncomplete;
+  const showProtected = riskWindow && usedToday;
+  const showAtRisk = riskWindow && !usedToday && freezeTokens >= 1;
 
   if (!showAtRisk && !showProtected) return null;
 
-  const handleUseToken = () => {
+  const useToken = () => {
     if (!showAtRisk || freezeTokens < 1) return;
-
     const nextTokens = Math.max(0, freezeTokens - 1);
     localStorage.setItem("streakman_freeze_tokens", String(nextTokens));
-    localStorage.setItem("streakman_shield_used", todayString());
-
-    setShieldState((current) => ({
-      ...current,
-      freezeTokens: nextTokens,
-      protectedToday: true,
-    }));
-
+    localStorage.setItem("streakman_shield_used", todayKey());
+    setFreezeTokens(nextTokens);
+    setUsedToday(true);
     window.dispatchEvent(new Event("tokensUpdated"));
   };
 
   if (showProtected) {
     return (
-      <section className="glass-card mb-6 rounded-3xl border border-emerald-300/45 bg-gradient-to-r from-emerald-300/15 to-teal-300/15 p-5" data-active="true">
-        <h3 className="text-lg font-semibold text-emerald-300">{"\u{1F6E1}\uFE0F"} Streak Protected</h3>
-        <p className="mt-2 text-sm text-zinc-300">Your streak is safe for today.</p>
-      </section>
+      <div className="mb-5 rounded-3xl bg-gradient-to-r from-emerald-300/60 to-teal-300/50 p-[1px]">
+        <section className="glass-card rounded-3xl p-5" data-active="true">
+          <h3 className="text-lg font-semibold text-emerald-300">🛡️ Streak Protected</h3>
+          <p className="mt-2 text-sm text-zinc-300">Your streak is safe today</p>
+        </section>
+      </div>
     );
   }
 
   return (
-    <section className="glass-card mb-6 rounded-3xl border border-rose-300/40 bg-gradient-to-r from-rose-300/12 to-amber-300/12 p-5" data-active="true">
-      <h3 className="text-lg font-semibold text-rose-300">{"\u{1F525}"} Streak at Risk</h3>
-      <p className="mt-1 text-sm text-zinc-300">Longest active streak: {longestStreak} days</p>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => router.push("/tasks")}
-          className="glass-card min-h-11 rounded-xl px-4 text-sm font-semibold text-zinc-100"
-        >
-          Complete a Task
-        </button>
-        <button
-          type="button"
-          onClick={handleUseToken}
-          className="glass-card min-h-11 rounded-xl border border-amber-300/35 px-4 text-sm font-semibold text-amber-200"
-        >
-          Use Freeze Token {"\u{1F48E}"}
-        </button>
-      </div>
-    </section>
+    <div className="mb-5 rounded-3xl bg-gradient-to-r from-rose-300/50 to-amber-300/55 p-[1px]">
+      <section className="glass-card rounded-3xl p-5" data-active="true">
+        <h3 className="text-lg font-semibold text-rose-300">🔥 Streak at Risk</h3>
+        <p className="mt-2 text-sm text-zinc-300">Longest active streak: {longestActiveStreak} days</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => router.push("/tasks")}
+            className="glass-card min-h-11 rounded-xl bg-teal-300/15 px-4 text-sm font-semibold text-zinc-100"
+          >
+            Complete a Task
+          </button>
+          <button
+            type="button"
+            onClick={useToken}
+            className="glass-card min-h-11 rounded-xl px-4 text-sm font-semibold text-amber-200"
+          >
+            Use Freeze Token 💎
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }

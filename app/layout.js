@@ -8,14 +8,20 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "Streak Manager",
-  description: "Gamified habit tracker",
+  title: "Streak Map",
+  description: "Build a city from your habits",
+  manifest: "/manifest.json",
+  themeColor: "#0B0B0B",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} antialiased bg-[#0F172A]`}>
+      <body className={`${inter.className} antialiased bg-[#0B0B0B]`}>
         {children}
         <AuthSyncManager />
         <GlobalAddButton />

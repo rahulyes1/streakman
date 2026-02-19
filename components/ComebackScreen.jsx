@@ -1,6 +1,14 @@
-﻿"use client";
+"use client";
+
+import { useEffect } from "react";
+import { setRecoveryMissionForToday } from "@/lib/dailyMission";
 
 export default function ComebackScreen({ xp, level, daysSince, onClose }) {
+  useEffect(() => {
+    if (!daysSince || daysSince < 3) return;
+    setRecoveryMissionForToday();
+  }, [daysSince]);
+
   if (!daysSince || daysSince < 3) return null;
 
   return (
@@ -10,13 +18,13 @@ export default function ComebackScreen({ xp, level, daysSince, onClose }) {
 
       <div className="relative z-10 mx-auto flex min-h-full w-full max-w-2xl items-center justify-center">
         <div className="glass-card w-full rounded-3xl border border-teal-300/25 p-6 sm:p-8" data-active="true">
-          <h2 className="text-3xl font-bold tracking-tight">{"\u{1F44B}"} Welcome back</h2>
+          <h2 className="text-3xl font-bold tracking-tight">👋 Welcome back</h2>
           <p className="mt-2 text-zinc-300">You were away for {daysSince} days. That&apos;s okay.</p>
 
           <div className="mt-5 space-y-2 text-sm text-zinc-300">
-            <p>{"\u2705"} {xp} XP intact</p>
-            <p>{"\u2705"} Level {level} intact</p>
-            <p>{"\u2705"} Streak history intact</p>
+            <p>✅ {xp} XP intact</p>
+            <p>✅ Level {level} intact</p>
+            <p>✅ Streak history intact</p>
           </div>
 
           <div className="mt-6 rounded-2xl border border-teal-300/30 bg-gradient-to-r from-teal-300/12 to-emerald-300/12 p-4">
