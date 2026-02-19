@@ -109,7 +109,7 @@ function TodayXPCard({ inline }) {
   return (
     <div className="glass-card mb-5 rounded-2xl p-4" data-active="true">
       <p className="text-sm font-semibold text-teal-300">
-        \u26A1 {inline ? "Today's XP Breakdown" : "Earned Today"}
+        {"\u26A1"} {inline ? "Today's XP Breakdown" : "Earned Today"}
       </p>
       <div className="mt-3">
         {rows.map((row) => (
@@ -210,7 +210,7 @@ function MultipliersSection({ currentStreak }) {
                 <div className="flex items-center gap-2 text-sm text-zinc-100">
                   <span className="emoji-premium emoji-premium-inline">{"\u{1F525}"}</span>
                   <span>{row.label}</span>
-                  {isPast ? <span className="text-emerald-300">\u2713</span> : null}
+                  {isPast ? <span className="text-emerald-300">{"\u2713"}</span> : null}
                   {isActive ? (
                     <span className="rounded-full bg-teal-300/15 px-2 py-0.5 text-[10px] font-semibold text-teal-200">Active</span>
                   ) : null}
@@ -300,7 +300,7 @@ function LevelUnlockSection({ currentLevel }) {
             >
               <div className="flex items-center justify-between rounded-xl p-3 transition hover:bg-white/[0.02]">
                 <div className="flex items-center gap-2 text-sm text-zinc-100">
-                  {unlocked ? <span className="text-emerald-300">\u2713</span> : null}
+                  {unlocked ? <span className="text-emerald-300">{"\u2713"}</span> : null}
                   {!unlocked && !isCurrent && !isNext ? (
                     <span className="text-zinc-500">{"\u{1F512}"}</span>
                   ) : null}
@@ -310,7 +310,9 @@ function LevelUnlockSection({ currentLevel }) {
                 </div>
                 <div className="text-xs">
                   {isCurrent ? (
-                    <span className="rounded-full bg-teal-300/15 px-2 py-0.5 text-teal-200">\u2190 You are here</span>
+                    <span className="rounded-full bg-teal-300/15 px-2 py-0.5 text-teal-200">
+                      {"\u2190"} You are here
+                    </span>
                   ) : null}
                   {isNext ? <span className="text-teal-300">Next unlock</span> : null}
                 </div>
@@ -356,7 +358,8 @@ function ForgeTiersSection({ tasks }) {
         />
       </div>
       <p className="mt-2 px-1 text-sm text-zinc-300">
-        Today: {completionRate}% \u2192 Tomorrow: <span className="font-semibold text-teal-300">{tierConfig.label}</span>
+        Today: {completionRate}% {"\u2192"} Tomorrow:{" "}
+        <span className="font-semibold text-teal-300">{tierConfig.label}</span>
       </p>
     </>
   );
@@ -403,7 +406,7 @@ export default function XPGuide({ isOpen = false, onClose, currentLevel = 1, inl
               className="flex h-6 w-6 items-center justify-center text-zinc-400"
               aria-label="Close XP guide"
             >
-              \u00D7
+              {"\u00D7"}
             </button>
           </div>
           <p className="mb-4 text-sm text-zinc-400">Every action fills your level bar</p>

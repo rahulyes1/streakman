@@ -91,7 +91,7 @@ export default function OnboardingPage() {
           <button
             type="button"
             onClick={handleSkip}
-            className="glass-card absolute right-4 top-1/2 min-h-11 -translate-y-1/2 rounded-xl px-4 text-sm font-semibold text-zinc-300"
+            className="glass-card absolute left-1/2 bottom-6 min-h-11 -translate-x-1/2 rounded-xl px-4 text-sm font-semibold text-zinc-300"
           >
             Skip
           </button>
