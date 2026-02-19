@@ -10,6 +10,7 @@ import MilestoneCelebration from "@/components/MilestoneCelebration";
 import ProgressBar from "@/components/ProgressBar";
 import StreakShieldCard from "@/components/StreakShieldCard";
 import { initializeDailyReset } from "@/lib/dailyReset";
+import { streakMilestone } from "@/lib/haptics";
 import { checkMilestones } from "@/lib/milestones";
 import { calculateScore } from "@/lib/scoring";
 import { getLevelFromXP } from "@/lib/xpSystem";
@@ -69,6 +70,16 @@ function readStoredEvent() {
   }
 }
 
+function readBestEverStreak() {
+  if (typeof window === "undefined") return 0;
+  return parseInt(localStorage.getItem("streakman_best_ever_streak") || "0", 10);
+}
+
+function getCurrentStreak(tasks) {
+  const taskList = Array.isArray(tasks) ? tasks : [];
+  return Math.max(...taskList.map((task) => Number(task?.streak || 0)), 0);
+}
+
 export default function ProgressPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [hoveredDay, setHoveredDay] = useState(null);
@@ -77,6 +88,8 @@ export default function ProgressPage() {
   const [freezeTokens, setFreezeTokens] = useState(0);
   const [cityEvent, setCityEvent] = useState(null);
   const [milestoneToCelebrate, setMilestoneToCelebrate] = useState(null);
+  const [bestEverStreak, setBestEverStreak] = useState(() => readBestEverStreak());
+  const [showNewBest, setShowNewBest] = useState(false);
   const [firstUseDate] = useState(() => {
     if (typeof window === "undefined") return null;
     let saved = localStorage.getItem("streakman_first_use");
@@ -108,6 +121,18 @@ export default function ProgressPage() {
       setTasks(parsed);
       setScoreData(calculateScore(parsed));
       setMilestoneToCelebrate(checkMilestones(parsed));
+
+      const currentStreak = getCurrentStreak(parsed);
+      const storedBest = readBestEverStreak();
+      if (currentStreak > storedBest) {
+        localStorage.setItem("streakman_best_ever_streak", String(currentStreak));
+        setBestEverStreak(currentStreak);
+        setShowNewBest(true);
+        streakMilestone();
+      } else {
+        setBestEverStreak(storedBest);
+        setShowNewBest(false);
+      }
     };
 
     loadTasks();
@@ -156,6 +181,7 @@ export default function ProgressPage() {
   const tasksRemaining = Math.max(0, tasks.length - completedToday);
   const currentStreak = Math.max(...tasks.map((task) => task.streak || 0), 0);
   const bestStreak = Math.max(...tasks.map((task) => task.bestStreak || 0), 0);
+  const ghostGap = Math.max(0, bestEverStreak - currentStreak);
   const weatherEmoji = getWeatherEmoji(scoreData.totalScore);
   const hour = new Date().getHours();
   const breatheClass =
@@ -433,16 +459,26 @@ export default function ProgressPage() {
             )}
 
             {activeTab === "stats" && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <SummaryCard label="Tracked Tasks" value={tasks.length} />
-                <SummaryCard label="Completed Today" value={completedToday} />
-                <SummaryCard label="Best Streak" value={bestStreak} />
-                <SummaryCard
-                  label="Completion Rate"
-                  value={`${Math.round((completedToday / (tasks.length || 1)) * 100)}%`}
-                />
-                <SummaryCard label="Grade" value={scoreData.grade} />
-                <SummaryCard label="Score" value={`${scoreData.totalScore}/100`} />
+              <div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <SummaryCard label="Tracked Tasks" value={tasks.length} />
+                  <SummaryCard label="Completed Today" value={completedToday} />
+                  <SummaryCard label="Best Streak" value={bestStreak} />
+                  <SummaryCard
+                    label="Completion Rate"
+                    value={`${Math.round((completedToday / (tasks.length || 1)) * 100)}%`}
+                  />
+                  <SummaryCard label="Grade" value={scoreData.grade} />
+                  <SummaryCard label="Score" value={`${scoreData.totalScore}/100`} />
+                </div>
+
+                {showNewBest ? (
+                  <p className="mt-3 text-sm text-amber-300">🔥 New personal best!</p>
+                ) : currentStreak > 0 && currentStreak < bestEverStreak ? (
+                  <p className="mt-3 text-sm text-zinc-500">
+                    👻 Your best: {bestEverStreak} days - {ghostGap} days away
+                  </p>
+                ) : null}
               </div>
             )}
 

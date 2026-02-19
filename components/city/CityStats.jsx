@@ -9,7 +9,7 @@ const WEATHER_META = {
   rain: { emoji: "\u{1F327}\uFE0F", label: "Rain" },
 };
 
-export default function CityStats({ weather, population, level, totalScore, cityEvent }) {
+export default function CityStats({ weather, population, level, totalScore, cityEvent, mood = null }) {
   const [displayPopulation, setDisplayPopulation] = useState(population);
   const previousRef = useRef(population);
 
@@ -49,6 +49,7 @@ export default function CityStats({ weather, population, level, totalScore, city
           <div className="text-right font-semibold text-zinc-200">Lv.{level}</div>
         </div>
         <p className="mt-1 text-xs text-zinc-500">City score {totalScore}</p>
+        {mood && <p className={`mt-1 text-xs ${mood.colorClass}`}>{mood.label}</p>}
       </div>
 
       {cityEvent && (

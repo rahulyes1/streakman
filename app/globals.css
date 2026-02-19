@@ -413,6 +413,149 @@ body {
   animation: cityUnlock 320ms ease-out both;
 }
 
+.city-building-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.city-building-card.state-new {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.city-building-card.state-active,
+.city-building-card.state-thriving {
+  border-color: rgba(94, 234, 212, 0.15);
+  background: rgba(94, 234, 212, 0.03);
+}
+
+.city-building-card.state-landmark {
+  border-color: rgba(94, 234, 212, 0.3);
+  background: linear-gradient(
+    rgba(94, 234, 212, 0.05),
+    rgba(167, 139, 250, 0.05)
+  );
+}
+
+.city-building-card.state-dark {
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.city-building-emoji-wrap {
+  display: inline-block;
+  line-height: 1;
+}
+
+.city-building-emoji {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  line-height: 1;
+}
+
+.city-building-card.state-new .city-building-emoji {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.city-building-card.state-active .city-building-emoji {
+  filter: drop-shadow(0 4px 12px rgba(94, 234, 212, 0.25));
+}
+
+.city-building-card.state-thriving .city-building-emoji {
+  filter:
+    drop-shadow(0 6px 20px rgba(94, 234, 212, 0.4))
+    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+}
+
+.city-building-card.state-landmark .city-building-emoji {
+  filter:
+    drop-shadow(0 8px 28px rgba(94, 234, 212, 0.6))
+    drop-shadow(0 0 12px rgba(167, 139, 250, 0.3));
+}
+
+.city-building-card.state-dark .city-building-emoji {
+  filter:
+    grayscale(1)
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+  opacity: 0.3;
+}
+
+.city-building-platform {
+  margin-top: 8px;
+  width: 72%;
+  height: 3px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.city-building-card.state-new .city-building-platform {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.city-building-card.state-active .city-building-platform {
+  background: rgba(94, 234, 212, 0.3);
+}
+
+.city-building-card.state-thriving .city-building-platform {
+  background: rgba(94, 234, 212, 0.5);
+}
+
+.city-building-card.state-landmark .city-building-platform {
+  background: linear-gradient(
+    90deg,
+    rgba(94, 234, 212, 0.7) 0%,
+    rgba(167, 139, 250, 0.7) 100%
+  );
+}
+
+.city-building-card.state-dark .city-building-platform {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.city-building-level-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #5eead4;
+  color: #5eead4;
+  box-shadow: 0 0 4px currentColor;
+}
+
+.city-building-level-dot.state-landmark {
+  background: #fcd34d;
+  color: #fcd34d;
+}
+
+.city-building-level-dot-empty {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.city-vacant-lot,
+.glass-card.flex.min-h-\[108px\].items-center.justify-center.rounded-2xl.opacity-40 {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  opacity: 0.2 !important;
+}
+
+.city-vacant-lot > span,
+.glass-card.flex.min-h-\[108px\].items-center.justify-center.rounded-2xl.opacity-40 > span {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  line-height: 1;
+  font-size: 1.5rem;
+}
+
 @keyframes ambientWarm {
   0% {
     opacity: 0.35;

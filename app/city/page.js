@@ -6,6 +6,7 @@ import CityBuilding from "@/components/city/CityBuilding";
 import CityPostcard from "@/components/city/CityPostcard";
 import CityStats from "@/components/city/CityStats";
 import CityWeather from "@/components/city/CityWeather";
+import { streakMilestone } from "@/lib/haptics";
 import { calculateScore } from "@/lib/scoring";
 import { getLevelFromXP } from "@/lib/xpSystem";
 import {
@@ -47,11 +48,49 @@ function yesterdayKey() {
   return dayKey(d);
 }
 
+function getCurrentStreak(tasks) {
+  const taskList = Array.isArray(tasks) ? tasks : [];
+  return Math.max(...taskList.map((task) => Number(task?.streak || 0)), 0);
+}
+
+function readBestEverStreak() {
+  if (typeof window === "undefined") return 0;
+  return parseInt(localStorage.getItem("streakman_best_ever_streak") || "0", 10);
+}
+
+function getUsageDayCount() {
+  if (typeof window === "undefined") return 1;
+  let firstUse = localStorage.getItem("streakman_first_use");
+  if (!firstUse) {
+    firstUse = new Date().toISOString();
+    localStorage.setItem("streakman_first_use", firstUse);
+  }
+
+  const first = new Date(firstUse);
+  const today = new Date();
+  first.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.max(1, Math.floor((today.getTime() - first.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+}
+
+function hasThreeMissedDays(tasks) {
+  const taskList = Array.isArray(tasks) ? tasks : [];
+  if (taskList.length === 0) return false;
+
+  const indices = [5, 4, 3];
+  return indices.every((historyIndex) =>
+    taskList.every((task) => !Boolean(task?.completionHistory?.[historyIndex]))
+  );
+}
+
 export default function CityPage() {
   const [tasks, setTasks] = useState(() => readTasks());
   const [xp, setXp] = useState(() => readXP());
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [toast, setToast] = useState("");
+  const [bestEverStreak, setBestEverStreak] = useState(() => readBestEverStreak());
+  const [showNewBest, setShowNewBest] = useState(false);
+  const [usageDayCount] = useState(() => getUsageDayCount());
   const [cityEvent, setCityEvent] = useState(() => {
     if (typeof window === "undefined") return null;
     return generateDailyEvent();
@@ -97,9 +136,22 @@ export default function CityPage() {
       setTasks(nextTasks);
       setXp(readXP());
       setCityEvent(generateDailyEvent());
+
+      const currentStreak = getCurrentStreak(nextTasks);
+      const storedBest = readBestEverStreak();
+      if (currentStreak > storedBest) {
+        localStorage.setItem("streakman_best_ever_streak", String(currentStreak));
+        setBestEverStreak(currentStreak);
+        setShowNewBest(true);
+        streakMilestone();
+      } else {
+        setBestEverStreak(storedBest);
+        setShowNewBest(false);
+      }
     };
 
     checkOvernightChanges(readTasks());
+    const bootstrap = window.setTimeout(() => load(), 0);
 
     const onTasks = () => load();
     const onXp = () => setXp(readXP());
@@ -108,6 +160,7 @@ export default function CityPage() {
     window.addEventListener("xpUpdated", onXp);
 
     return () => {
+      window.clearTimeout(bootstrap);
       window.removeEventListener("tasksUpdated", onTasks);
       window.removeEventListener("xpUpdated", onXp);
     };
@@ -121,9 +174,28 @@ export default function CityPage() {
 
   const scoreData = calculateScore(tasks);
   const weather = getCityWeather(scoreData.totalScore);
-  const population = getPopulation(xp);
+  const basePopulation = getPopulation(xp);
+  const completedToday = tasks.filter((task) => task.completedToday).length;
+  const incompleteToday = tasks.filter((task) => !task.completedToday).length;
+  const displayPopulation = Math.max(0, basePopulation + completedToday * 5 - incompleteToday * 2);
   const level = getLevelFromXP(xp).level;
+  const currentStreak = getCurrentStreak(tasks);
   const bestStreak = getBestStreak(tasks);
+  const recentMissed = hasThreeMissedDays(tasks);
+  const cityMood = (() => {
+    if (scoreData.totalScore >= 75 && completedToday > 0 && !recentMissed) {
+      return { label: "🌟 Flourishing", colorClass: "text-emerald-300" };
+    }
+    if (scoreData.totalScore < 25 || recentMissed) {
+      return { label: "🆘 Buildings going dark", colorClass: "text-rose-300" };
+    }
+    if (scoreData.totalScore >= 50) {
+      return { label: "😊 Doing well", colorClass: "text-teal-300" };
+    }
+    return { label: "😟 Needs attention", colorClass: "text-amber-300" };
+  })();
+  const showMood = usageDayCount > 3;
+  const ghostGap = Math.max(0, bestEverStreak - currentStreak);
 
   const buildings = useMemo(
     () =>
@@ -156,15 +228,23 @@ export default function CityPage() {
         <div className="relative z-10 mx-auto max-w-6xl">
           <header className="mb-4">
             <h1 className="text-3xl font-bold tracking-tight">Your City</h1>
-            <p className="mt-1 text-sm text-zinc-400">Population {population}</p>
+            <p className="mt-1 text-sm text-zinc-400">Population {displayPopulation}</p>
+            {showNewBest ? (
+              <p className="mt-1 text-xs text-amber-300">🔥 New personal best!</p>
+            ) : currentStreak > 0 && currentStreak < bestEverStreak ? (
+              <p className="mt-1 text-xs text-zinc-500">
+                👻 Your best: {bestEverStreak} days - {ghostGap} days away
+              </p>
+            ) : null}
           </header>
 
           <CityStats
             weather={weather}
-            population={population}
+            population={displayPopulation}
             level={level}
             totalScore={scoreData.totalScore}
             cityEvent={cityEvent}
+            mood={showMood ? cityMood : null}
           />
 
           <section className="glass-card relative mb-5 overflow-hidden rounded-3xl p-4">
