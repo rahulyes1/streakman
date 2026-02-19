@@ -54,7 +54,10 @@ function buildMissionState() {
 }
 
 export default function DailyMissionCard() {
-  const [missionState, setMissionState] = useState(buildMissionState);
+  const [missionState, setMissionState] = useState({
+    mission: null,
+    progress: { value: 0, target: 1, completed: false, ratio: 0 },
+  });
   const router = useRouter();
 
   const refresh = () => {
@@ -62,16 +65,15 @@ export default function DailyMissionCard() {
   };
 
   useEffect(() => {
+    refresh();
     const handleTasks = () => refresh();
     const handleTick = () => refresh();
-    const bootstrapTimer = window.setTimeout(handleTick, 0);
 
     window.addEventListener("tasksUpdated", handleTasks);
     const timer = window.setInterval(handleTick, 60000);
 
     return () => {
       window.removeEventListener("tasksUpdated", handleTasks);
-      window.clearTimeout(bootstrapTimer);
       window.clearInterval(timer);
     };
   }, []);
