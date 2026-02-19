@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -25,9 +25,9 @@ const STATUS_CONFIG = {
 
 function getGreeting() {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good Morning \u{1F44B}";
-  if (hour < 18) return "Good Afternoon \u{1F44B}";
-  return "Good Evening \u{1F44B}";
+  if (hour < 12) return { text: "Good Morning", emoji: "\u{1F44B}" };
+  if (hour < 18) return { text: "Good Afternoon", emoji: "\u{1F44B}" };
+  return { text: "Good Evening", emoji: "\u{1F44B}" };
 }
 
 function getWeatherEmoji(totalScore) {
@@ -183,6 +183,7 @@ export default function ProgressPage() {
   const bestStreak = Math.max(...tasks.map((task) => task.bestStreak || 0), 0);
   const ghostGap = Math.max(0, bestEverStreak - currentStreak);
   const weatherEmoji = getWeatherEmoji(scoreData.totalScore);
+  const greeting = getGreeting();
   const hour = new Date().getHours();
   const breatheClass =
     completedToday >= tasks.length && tasks.length > 0
@@ -280,7 +281,10 @@ export default function ProgressPage() {
 
         <div className="relative z-10 mx-auto max-w-4xl">
           <header className="mb-5">
-            <h1 className="text-3xl font-bold tracking-tight">{getGreeting()}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {greeting.text}{" "}
+              <span className="emoji-premium emoji-premium-inline emoji-premium-teal">{greeting.emoji}</span>
+            </h1>
             <p className="mt-1 text-sm text-zinc-400">Day {dayCount} of your streak</p>
           </header>
 
@@ -318,7 +322,9 @@ export default function ProgressPage() {
           <div className="mb-5 rounded-3xl bg-gradient-to-r from-teal-300/40 to-purple-300/40 p-[1px]">
             <section className="glass-card rounded-3xl p-5" data-active="true">
               <div className="mb-3 flex items-center gap-2">
-                <span className="text-2xl">{weatherEmoji}</span>
+                <span className="emoji-premium emoji-premium-icon emoji-premium-muted text-2xl">
+                  {weatherEmoji}
+                </span>
                 <h2 className="text-lg font-semibold">Today in your city</h2>
               </div>
               <p className="text-sm text-zinc-300">
@@ -425,7 +431,7 @@ export default function ProgressPage() {
                           <div
                             className={`flex aspect-square cursor-pointer items-center justify-center rounded-lg text-lg transition-spring hover:-translate-y-0.5 ${config.cellClass}`}
                           >
-                            {config.emoji}
+                            <span className="emoji-premium emoji-premium-inline">{config.emoji}</span>
                           </div>
 
                           {hoveredDay === idx && (
@@ -473,10 +479,14 @@ export default function ProgressPage() {
                 </div>
 
                 {showNewBest ? (
-                  <p className="mt-3 text-sm text-amber-300">🔥 New personal best!</p>
+                  <p className="mt-3 text-sm text-amber-300">
+                    <span className="emoji-premium emoji-premium-inline emoji-premium-amber mr-1">{"\u{1F525}"}</span>
+                    New personal best!
+                  </p>
                 ) : currentStreak > 0 && currentStreak < bestEverStreak ? (
                   <p className="mt-3 text-sm text-zinc-500">
-                    👻 Your best: {bestEverStreak} days - {ghostGap} days away
+                    <span className="emoji-premium emoji-premium-inline emoji-premium-muted mr-1">{"\u{1F47B}"}</span>
+                    Your best: {bestEverStreak} days - {ghostGap} days away
                   </p>
                 ) : null}
               </div>
@@ -513,3 +523,4 @@ function SummaryCard({ label, value, tone = "text-zinc-100" }) {
     </div>
   );
 }
+

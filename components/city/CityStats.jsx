@@ -42,19 +42,25 @@ export default function CityStats({ weather, population, level, totalScore, city
       <div className="glass-card rounded-2xl p-3">
         <div className="grid grid-cols-3 items-center gap-2 text-sm">
           <div className="flex items-center gap-1 text-zinc-200">
-            <span>{weatherMeta.emoji}</span>
+            <span className="emoji-premium emoji-premium-inline emoji-premium-muted">{weatherMeta.emoji}</span>
             <span>{weatherMeta.label}</span>
           </div>
           <div className="text-center font-semibold text-zinc-100">Pop. {displayPopulation}</div>
           <div className="text-right font-semibold text-zinc-200">Lv.{level}</div>
         </div>
         <p className="mt-1 text-xs text-zinc-500">City score {totalScore}</p>
-        {mood && <p className={`mt-1 text-xs ${mood.colorClass}`}>{mood.label}</p>}
+        {mood && (
+          <p className={`mt-1 text-xs ${mood.colorClass}`}>
+            <span className="emoji-premium emoji-premium-inline mr-1">{mood.emoji}</span>
+            {mood.label}
+          </p>
+        )}
       </div>
 
       {cityEvent && (
         <div className="mt-2 rounded-xl bg-amber-300/10 px-3 py-2 text-xs text-amber-300">
-          {cityEvent.emoji} {cityEvent.title}
+          <span className="emoji-premium emoji-premium-inline emoji-premium-amber mr-1">{cityEvent.emoji}</span>
+          {cityEvent.title}
         </div>
       )}
     </div>

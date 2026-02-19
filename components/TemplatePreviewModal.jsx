@@ -8,7 +8,7 @@ function buildTaskObject(taskItem, index) {
   return {
     id: `${baseId}-${Math.random().toString(16).slice(2, 8)}`,
     name: taskItem.name,
-    emoji: taskItem.emoji || "📝",
+    emoji: taskItem.emoji || "\u{1F4DD}",
     streak: 0,
     completedToday: false,
     completionHistory: Array(7).fill(false),
@@ -68,7 +68,9 @@ export default function TemplatePreviewModal({ template, onClose, onAdded }) {
         <div className="glass-card mx-auto w-full max-w-lg rounded-3xl p-5 animate-modalSlideUp" data-active="true">
           <div className="mb-4 flex items-start justify-between gap-2">
             <div>
-              <p className="text-2xl">{template.emoji}</p>
+              <p className="text-2xl">
+                <span className="emoji-premium emoji-premium-icon emoji-premium-teal">{template.emoji}</span>
+              </p>
               <h3 className="mt-1 text-xl font-semibold">{template.name}</h3>
               <p className="text-sm text-zinc-400">{template.description}</p>
             </div>
@@ -91,7 +93,8 @@ export default function TemplatePreviewModal({ template, onClose, onAdded }) {
                   className="glass-card flex min-h-11 items-center justify-between rounded-xl px-3 py-2 text-sm"
                 >
                   <span>
-                    {task.emoji} {task.name}
+                    <span className="emoji-premium emoji-premium-inline emoji-premium-muted mr-1">{task.emoji}</span>
+                    {task.name}
                   </span>
                   <input
                     type="checkbox"

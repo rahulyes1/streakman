@@ -24,7 +24,9 @@ export default function CityPostcard({ task, buildingType, buildingEmoji, onClos
         <div className="glass-card mx-auto w-full max-w-xl rounded-3xl p-5" data-active="true">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
-              <p className="text-5xl">{buildingEmoji}</p>
+              <p className="text-5xl">
+                <span className="emoji-premium emoji-premium-icon emoji-premium-teal">{buildingEmoji}</span>
+              </p>
               <h3 className="mt-2 text-xl font-semibold text-zinc-100">{task.name}</h3>
             </div>
             <button
@@ -38,9 +40,17 @@ export default function CityPostcard({ task, buildingType, buildingEmoji, onClos
           </div>
 
           <div className="space-y-1 text-sm text-zinc-300">
-            <p>Current streak: {streak} days 🔥</p>
+            <p>
+              Current streak: {streak} days{" "}
+              <span className="emoji-premium emoji-premium-inline emoji-premium-amber">{"\u{1F525}"}</span>
+            </p>
             <p>Best streak: {bestStreak} days</p>
-            <p>Completed today: {completedToday ? "\u2705" : "\u274C"}</p>
+            <p>
+              Completed today:{" "}
+              <span className="emoji-premium emoji-premium-inline">
+                {completedToday ? "\u2705" : "\u274C"}
+              </span>
+            </p>
             <p>
               This {buildingType} has been open for {streak} consecutive days.
             </p>
@@ -56,7 +66,9 @@ export default function CityPostcard({ task, buildingType, buildingEmoji, onClos
                     value ? "bg-emerald-300/20 text-emerald-300" : "bg-white/[0.04] text-zinc-500"
                   }`}
                 >
-                  {value ? "\u2705" : "\u274C"}
+                  <span className="emoji-premium emoji-premium-inline">
+                    {value ? "\u2705" : "\u274C"}
+                  </span>
                 </div>
               ))}
             </div>

@@ -1,10 +1,16 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const CITY_BUILDINGS = ["🏠", "🏢", "📚", "☕", "🏋️"];
+const CITY_BUILDINGS = [
+  "\u{1F3E0}",
+  "\u{1F3E2}",
+  "\u{1F4DA}",
+  "\u{2615}",
+  "\u{1F3CB}\uFE0F",
+];
 
 function useTicker(target, duration, trigger) {
   const [value, setValue] = useState(0);
@@ -75,7 +81,7 @@ export default function OnboardingPage() {
                 className="glass-card streak-breathe-slow flex h-14 w-12 items-center justify-center rounded-xl text-2xl"
                 style={{ animationDelay: `${index * 0.2}s` }}
               >
-                {emoji}
+                <span className="emoji-premium emoji-premium-icon emoji-premium-teal">{emoji}</span>
               </div>
             ))}
           </div>
@@ -133,7 +139,9 @@ export default function OnboardingPage() {
                 {index === 0 ? (
                   <span className="text-2xl text-zinc-300 animate-pulse">|</span>
                 ) : (
-                  <span className="text-xl text-zinc-600">🏚️</span>
+                  <span className="emoji-premium emoji-premium-icon emoji-premium-muted text-xl text-zinc-600">
+                    {"\u{1F3DA}\uFE0F"}
+                  </span>
                 )}
               </div>
             ))}

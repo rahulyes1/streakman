@@ -188,7 +188,11 @@ export default function DailyForge() {
         <div>
           <p className="text-xs uppercase tracking-[0.16em] text-zinc-400">Daily Forge</p>
           <h3 className="mt-1 text-xl font-semibold text-zinc-100">
-            {tierConfig.emoji ? `${tierConfig.emoji} ` : ""}
+            {tierConfig.emoji ? (
+              <span className="emoji-premium emoji-premium-icon emoji-premium-teal mr-1">
+                {tierConfig.emoji}
+              </span>
+            ) : null}
             {tierConfig.label}
           </h3>
         </div>

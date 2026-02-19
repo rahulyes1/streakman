@@ -40,7 +40,9 @@ export default function CityBuilding({
       aria-label={`Open ${task?.name || "building"} details`}
     >
       <span className="city-building-emoji-wrap">
-        <span className={`city-building-emoji ${sizeClass} ${animationClass}`}>{buildingEmoji}</span>
+        <span className={`city-building-emoji emoji-premium ${sizeClass} ${animationClass}`}>
+          {buildingEmoji}
+        </span>
       </span>
 
       <div className="city-building-platform" />

@@ -503,7 +503,7 @@ function TasksContent() {
               <div className="mb-5 flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] text-3xl">
-                    {selectedTask.emoji}
+                    <span className="emoji-premium emoji-premium-icon">{selectedTask.emoji}</span>
                   </div>
                   <div className="min-w-0">
                     <h2 className="truncate text-xl font-bold">{selectedTask.name}</h2>
@@ -632,7 +632,9 @@ function TasksContent() {
                       onClick={() => setNewTask((current) => ({ ...current, name: task.name, emoji: task.emoji }))}
                       className="glass-card flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm"
                     >
-                      <span>{task.emoji}</span>
+                      <span className="emoji-premium emoji-premium-inline emoji-premium-muted">
+                        {task.emoji}
+                      </span>
                       <span className="truncate">{task.name}</span>
                     </button>
                   ))}
@@ -902,7 +904,7 @@ function TaskRow({
     >
       <div className="flex items-start gap-3">
         <div className="glass-card flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-2xl">
-          {task.emoji}
+          <span className="emoji-premium emoji-premium-icon">{task.emoji}</span>
         </div>
 
         <div className="min-w-0 flex-1">
@@ -1074,7 +1076,9 @@ function FirstCompletionCeremony({ task, onClose }) {
 
       <div className="relative z-10 mx-auto flex min-h-full w-full max-w-lg items-center justify-center">
         <div className="glass-card w-full rounded-3xl p-6 text-center animate-scaleIn" data-active="true">
-          <p className="text-7xl">{buildingEmoji}</p>
+          <p className="text-7xl">
+            <span className="emoji-premium emoji-premium-icon emoji-premium-teal">{buildingEmoji}</span>
+          </p>
           <h2 className="mt-3 text-3xl font-bold">Day 1 - Foundation Laid</h2>
           <p className="mt-2 text-4xl font-bold text-teal-300">+50 XP</p>
           <p className="mt-2 text-zinc-300">Your city is coming to life.</p>

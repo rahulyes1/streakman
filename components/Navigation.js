@@ -23,7 +23,8 @@ export default function Navigation() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="text-lg font-bold text-[#F1F5F9]">
-              🔥 Streak Manager
+              <span className="emoji-premium emoji-premium-inline emoji-premium-amber mr-1">🔥</span>
+              Streak Manager
             </Link>
 
             {/* Desktop Navigation */}

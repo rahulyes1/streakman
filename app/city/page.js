@@ -184,15 +184,15 @@ export default function CityPage() {
   const recentMissed = hasThreeMissedDays(tasks);
   const cityMood = (() => {
     if (scoreData.totalScore >= 75 && completedToday > 0 && !recentMissed) {
-      return { label: "🌟 Flourishing", colorClass: "text-emerald-300" };
+      return { emoji: "\u{1F31F}", label: "Flourishing", colorClass: "text-emerald-300" };
     }
     if (scoreData.totalScore < 25 || recentMissed) {
-      return { label: "🆘 Buildings going dark", colorClass: "text-rose-300" };
+      return { emoji: "\u{1F198}", label: "Buildings going dark", colorClass: "text-rose-300" };
     }
     if (scoreData.totalScore >= 50) {
-      return { label: "😊 Doing well", colorClass: "text-teal-300" };
+      return { emoji: "\u{1F60A}", label: "Doing well", colorClass: "text-teal-300" };
     }
-    return { label: "😟 Needs attention", colorClass: "text-amber-300" };
+    return { emoji: "\u{1F61F}", label: "Needs attention", colorClass: "text-amber-300" };
   })();
   const showMood = usageDayCount > 3;
   const ghostGap = Math.max(0, bestEverStreak - currentStreak);
@@ -230,10 +230,18 @@ export default function CityPage() {
             <h1 className="text-3xl font-bold tracking-tight">Your City</h1>
             <p className="mt-1 text-sm text-zinc-400">Population {displayPopulation}</p>
             {showNewBest ? (
-              <p className="mt-1 text-xs text-amber-300">🔥 New personal best!</p>
+              <p className="mt-1 text-xs text-amber-300">
+                <span className="emoji-premium emoji-premium-inline emoji-premium-amber mr-1">
+                  {"\u{1F525}"}
+                </span>
+                New personal best!
+              </p>
             ) : currentStreak > 0 && currentStreak < bestEverStreak ? (
               <p className="mt-1 text-xs text-zinc-500">
-                👻 Your best: {bestEverStreak} days - {ghostGap} days away
+                <span className="emoji-premium emoji-premium-inline emoji-premium-muted mr-1">
+                  {"\u{1F47B}"}
+                </span>
+                Your best: {bestEverStreak} days - {ghostGap} days away
               </p>
             ) : null}
           </header>
@@ -256,9 +264,11 @@ export default function CityPage() {
                   return (
                     <div
                       key={`lot-${index}`}
-                      className="glass-card flex min-h-[108px] items-center justify-center rounded-2xl opacity-40"
+                      className="glass-card city-vacant-lot flex min-h-[108px] items-center justify-center rounded-2xl"
                     >
-                      <span className="text-2xl">🏚️</span>
+                      <span className="emoji-premium emoji-premium-icon emoji-premium-muted text-2xl">
+                        {"\u{1F3DA}\uFE0F"}
+                      </span>
                     </div>
                   );
                 }
@@ -290,15 +300,21 @@ export default function CityPage() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-zinc-100">
-                          {neighborhood.emoji} {neighborhood.name}
+                          <span className="emoji-premium emoji-premium-inline emoji-premium-teal mr-1">
+                            {neighborhood.emoji}
+                          </span>
+                          {neighborhood.name}
                         </h3>
                         <span className="text-xs text-emerald-300">Unlocked</span>
                       </div>
                       <p className="text-xs text-zinc-400">{neighborhood.description}</p>
                       <div className="flex items-center gap-2">
                         {Array.from({ length: neighborhood.slots }).map((_, index) => (
-                          <span key={`${neighborhood.id}-slot-${index}`} className="text-xl opacity-60">
-                            🏚️
+                          <span
+                            key={`${neighborhood.id}-slot-${index}`}
+                            className="emoji-premium emoji-premium-inline emoji-premium-muted text-xl opacity-60"
+                          >
+                            {"\u{1F3DA}\uFE0F"}
                           </span>
                         ))}
                       </div>
@@ -307,7 +323,10 @@ export default function CityPage() {
                     <div>
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-zinc-100">
-                          🔒 {neighborhood.name}
+                          <span className="emoji-premium emoji-premium-inline emoji-premium-muted mr-1">
+                            {"\u{1F512}"}
+                          </span>
+                          {neighborhood.name}
                         </h3>
                         <span className="text-xs text-zinc-400">
                           Day {bestStreak} / {neighborhood.requiredStreak}

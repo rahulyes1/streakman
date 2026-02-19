@@ -125,7 +125,7 @@ export default function BadgeDisplay({ compact = false }) {
               className="glass-card flex min-w-[60px] flex-shrink-0 items-center justify-center rounded-lg p-2 text-center"
               title={badge.description}
             >
-              <span className="text-2xl">{badge.emoji}</span>
+              <span className="emoji-premium emoji-premium-icon text-2xl">{badge.emoji}</span>
             </div>
           ))
         )}
@@ -145,7 +145,9 @@ export default function BadgeDisplay({ compact = false }) {
               key={badge.id}
               className="glass-card rounded-xl border border-teal-300/30 p-3 text-center transition-spring hover:-translate-y-0.5"
             >
-              <span className="mb-2 block text-4xl">{badge.emoji}</span>
+              <span className="emoji-premium emoji-premium-icon emoji-premium-teal mb-2 block text-4xl">
+                {badge.emoji}
+              </span>
               <p className="text-xs font-semibold text-zinc-100">{badge.name}</p>
               <p className="mt-1 text-xs text-zinc-500">{badge.description}</p>
             </div>
@@ -157,7 +159,9 @@ export default function BadgeDisplay({ compact = false }) {
         <div className="glass-card rounded-xl border border-purple-300/30 bg-gradient-to-r from-purple-300/10 to-teal-300/10 p-4">
           <p className="mb-2 text-xs text-zinc-400">Next Badge</p>
           <div className="flex items-center gap-3">
-            <span className="text-3xl opacity-60">{nextBadge.emoji}</span>
+            <span className="emoji-premium emoji-premium-icon emoji-premium-muted text-3xl opacity-60">
+              {nextBadge.emoji}
+            </span>
             <div>
               <p className="font-semibold text-zinc-100">{nextBadge.name}</p>
               <p className="text-sm text-zinc-400">{nextBadge.description}</p>
@@ -168,7 +172,9 @@ export default function BadgeDisplay({ compact = false }) {
 
       {earnedBadges.length === BADGES.length && (
         <div className="glass-card rounded-xl border border-amber-300/35 bg-gradient-to-r from-amber-300/20 to-rose-300/20 p-4 text-center">
-          <p className="mb-2 text-2xl">{"\u{1F3C6}"}</p>
+          <p className="mb-2 text-2xl">
+            <span className="emoji-premium emoji-premium-icon emoji-premium-amber">{"\u{1F3C6}"}</span>
+          </p>
           <p className="text-lg font-bold text-zinc-100">All Badges Earned!</p>
           <p className="mt-1 text-sm text-zinc-400">You&apos;re a true habit master.</p>
         </div>

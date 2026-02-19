@@ -17,7 +17,9 @@ export default function TemplateCard({ template, onSelect }) {
     >
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
-          <p className="text-2xl">{template.emoji}</p>
+          <p className="text-2xl">
+            <span className="emoji-premium emoji-premium-icon emoji-premium-teal">{template.emoji}</span>
+          </p>
           <h3 className="mt-1 text-sm font-semibold text-zinc-100">{template.name}</h3>
         </div>
         <span className={`text-xs font-semibold ${difficultyTone(template.difficulty)}`}>
@@ -28,7 +30,8 @@ export default function TemplateCard({ template, onSelect }) {
       <ul className="space-y-1 text-xs text-zinc-400">
         {previewTasks.map((task) => (
           <li key={`${template.id}-${task.name}`}>
-            {task.emoji} {task.name}
+            <span className="emoji-premium emoji-premium-inline emoji-premium-muted mr-1">{task.emoji}</span>
+            {task.name}
           </li>
         ))}
       </ul>

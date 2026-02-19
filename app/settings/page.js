@@ -351,7 +351,7 @@ function PresetButton({ label, icon, active, onClick }) {
           : "text-zinc-300 hover:text-zinc-100"
       }`}
     >
-      <span className="mr-1">{icon}</span>
+      <span className="emoji-premium emoji-premium-inline emoji-premium-muted mr-1">{icon}</span>
       {label}
     </button>
   );

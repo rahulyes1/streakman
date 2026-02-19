@@ -40,7 +40,7 @@ export default function TaskCard({ task, onComplete, onCustomize, onFreeze, onDe
     <div className="relative rounded-xl border border-[#334155] bg-[#1E293B] p-4 transition-spring hover:border-[#60A5FA]/30 hover:shadow-lg">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex flex-1 items-center gap-2">
-          <span className="text-2xl">{task.emoji}</span>
+          <span className="emoji-premium emoji-premium-icon text-2xl">{task.emoji}</span>
           <div className="flex-1">
             <h2 className="text-base font-semibold">{task.name}</h2>
             <p className="text-xs text-[#94A3B8]">{getStreakDisplay()}</p>

@@ -84,7 +84,10 @@ export default function StreakShieldCard() {
     return (
       <div className="mb-5 rounded-3xl bg-gradient-to-r from-emerald-300/60 to-teal-300/50 p-[1px]">
         <section className="glass-card rounded-3xl p-5" data-active="true">
-          <h3 className="text-lg font-semibold text-emerald-300">🛡️ Streak Protected</h3>
+          <h3 className="text-lg font-semibold text-emerald-300">
+            <span className="emoji-premium emoji-premium-inline emoji-premium-teal mr-1">🛡️</span>
+            Streak Protected
+          </h3>
           <p className="mt-2 text-sm text-zinc-300">Your streak is safe today</p>
         </section>
       </div>
@@ -94,7 +97,10 @@ export default function StreakShieldCard() {
   return (
     <div className="mb-5 rounded-3xl bg-gradient-to-r from-rose-300/50 to-amber-300/55 p-[1px]">
       <section className="glass-card rounded-3xl p-5" data-active="true">
-        <h3 className="text-lg font-semibold text-rose-300">🔥 Streak at Risk</h3>
+        <h3 className="text-lg font-semibold text-rose-300">
+          <span className="emoji-premium emoji-premium-inline emoji-premium-rose mr-1">🔥</span>
+          Streak at Risk
+        </h3>
         <p className="mt-2 text-sm text-zinc-300">Longest active streak: {longestActiveStreak} days</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button
@@ -109,7 +115,8 @@ export default function StreakShieldCard() {
             onClick={useToken}
             className="glass-card min-h-11 rounded-xl px-4 text-sm font-semibold text-amber-200"
           >
-            Use Freeze Token 💎
+            Use Freeze Token{" "}
+            <span className="emoji-premium emoji-premium-inline emoji-premium-amber">💎</span>
           </button>
         </div>
       </section>

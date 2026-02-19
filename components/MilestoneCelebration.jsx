@@ -20,7 +20,9 @@ export default function MilestoneCelebration({ milestone, onClose }) {
         className="glass-card w-full max-w-md rounded-3xl border border-purple-300/35 bg-gradient-to-br from-purple-300/15 to-teal-300/15 p-6 text-center animate-modalSlideUp"
         data-active="true"
       >
-        <p className="text-7xl">{milestone.emoji}</p>
+        <p className="text-7xl">
+          <span className="emoji-premium emoji-premium-icon emoji-premium-teal">{milestone.emoji}</span>
+        </p>
         <h2 className="mt-3 text-3xl font-bold text-zinc-100">{milestone.title}</h2>
         <p className="mt-3 text-sm text-zinc-300">{milestone.message}</p>
         <p className="mt-4 text-3xl font-bold text-teal-300">+{milestone.xpBonus} XP</p>

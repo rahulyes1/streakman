@@ -6,7 +6,7 @@ const REWARDS = [
   { type: "xp", value: 25, weight: 80, label: "+25 XP", emoji: "\u2728" },
   { type: "xp", value: 50, weight: 15, label: "+50 XP", emoji: "\u2B50" },
   { type: "xp", value: 100, weight: 4, label: "+100 XP", emoji: "\u{1F31F}" },
-  { type: "token", value: 1, weight: 1, label: "\u{1F48E} Freeze Token", emoji: "\u{1F48E}" },
+  { type: "token", value: 1, weight: 1, label: "Freeze Token", emoji: "\u{1F48E}" },
 ];
 
 export default function DailySpin() {
@@ -70,13 +70,17 @@ export default function DailySpin() {
             isSpinning ? "animate-spin" : ""
           }`}
         >
-          {isSpinning ? "\u{1F3B0}" : "\u{1F381}"}
+          <span className="emoji-premium emoji-premium-icon emoji-premium-teal">
+            {isSpinning ? "\u{1F3B0}" : "\u{1F381}"}
+          </span>
         </div>
       </div>
 
       {result && (
         <div className="mb-4 rounded-xl border border-teal-300/40 bg-teal-300/10 p-3 text-center">
-          <p className="mb-2 text-2xl">{result.emoji}</p>
+          <p className="mb-2 text-2xl">
+            <span className="emoji-premium emoji-premium-icon emoji-premium-teal">{result.emoji}</span>
+          </p>
           <p className="text-sm font-semibold text-teal-200">You won {result.label}!</p>
         </div>
       )}
@@ -103,7 +107,12 @@ export default function DailySpin() {
         <p className="mb-2 font-semibold">Rewards:</p>
         {REWARDS.map((reward) => (
           <div key={reward.label} className="flex justify-between">
-            <span>{reward.label}</span>
+            <span>
+              <span className="emoji-premium emoji-premium-inline emoji-premium-muted mr-1">
+                {reward.emoji}
+              </span>
+              {reward.label}
+            </span>
             <span>{reward.weight}%</span>
           </div>
         ))}

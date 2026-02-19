@@ -50,7 +50,8 @@ export default function DailyMissionCard() {
       <section className="glass-card rounded-3xl p-5" data-active="true">
         <div className="mb-3 flex items-start justify-between gap-3">
           <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-zinc-300">
-            ⚡ Daily Mission
+            <span className="emoji-premium emoji-premium-inline emoji-premium-teal mr-1">⚡</span>
+            Daily Mission
           </h3>
           <span className="glass-card rounded-full px-3 py-1 text-xs font-semibold text-teal-200">
             +{mission.xpReward} XP
@@ -78,7 +79,10 @@ export default function DailyMissionCard() {
 
         <div className="mt-4 flex items-center justify-between gap-2">
           {completed ? (
-            <p className="text-sm font-semibold text-emerald-300">✅ Mission Complete</p>
+            <p className="text-sm font-semibold text-emerald-300">
+              <span className="emoji-premium emoji-premium-inline emoji-premium-teal mr-1">✅</span>
+              Mission Complete
+            </p>
           ) : (
             <p className="text-sm text-zinc-400">Keep momentum to finish this mission.</p>
           )}
