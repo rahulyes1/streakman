@@ -23,7 +23,17 @@ import { BUILDING_EMOJIS, getBuildingType } from "@/lib/cityEngine";
 import { initializeDailyReset } from "@/lib/dailyReset";
 import { setRecoveryMissionForToday } from "@/lib/dailyMission";
 import { allTasksComplete, taskComplete } from "@/lib/haptics";
-import { addXP, checkStreakMilestoneXP, getLevelFromXP, XP_REWARDS } from "@/lib/xpSystem";
+import {
+  XP_REWARDS,
+  addXP,
+  checkStreakMilestoneXP,
+  getAllTasksBonusXP,
+  getComboMultiplier,
+  getEarlyBonusXP,
+  getLevelFromXP,
+  getNextComboUpgrade,
+  getXPWithMultipliers,
+} from "@/lib/xpSystem";
 
 const SPRING = { type: "spring", stiffness: 400, damping: 30 };
 
@@ -49,6 +59,40 @@ const EMPTY_TASK = {
   goalValue: "",
   goalUnit: "",
 };
+
+const TASK_XP_LEDGER_KEY = "streakman_task_xp_awards_today";
+
+function getLedgerDateKey(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
+function readTaskXPLedger() {
+  if (typeof window === "undefined") return { date: getLedgerDateKey(), taskAwards: {}, allTasksBonus: 0 };
+  const expectedDate = getLedgerDateKey();
+  const raw = localStorage.getItem(TASK_XP_LEDGER_KEY);
+  if (!raw) {
+    return { date: expectedDate, taskAwards: {}, allTasksBonus: 0 };
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || parsed.date !== expectedDate) {
+      return { date: expectedDate, taskAwards: {}, allTasksBonus: 0 };
+    }
+    return {
+      date: expectedDate,
+      taskAwards: parsed.taskAwards && typeof parsed.taskAwards === "object" ? parsed.taskAwards : {},
+      allTasksBonus: Math.max(0, Number(parsed.allTasksBonus) || 0),
+    };
+  } catch {
+    return { date: expectedDate, taskAwards: {}, allTasksBonus: 0 };
+  }
+}
+
+function writeTaskXPLedger(ledger) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(TASK_XP_LEDGER_KEY, JSON.stringify(ledger));
+}
 
 function sortTasks(items) {
   return [...items].sort((a, b) => {
@@ -128,13 +172,24 @@ function TasksContent() {
 
   useEffect(() => {
     const sessionKey = "streakman_onboarding_checked";
+    const quickIntroKey = "streakman_quick_intro_seen";
     if (sessionStorage.getItem(sessionKey)) return;
-    sessionStorage.setItem(sessionKey, "1");
 
-    const hasOnboarded = localStorage.getItem("streakman_onboarded");
+    const hasOnboarded = Boolean(localStorage.getItem("streakman_onboarded"));
     if (!hasOnboarded) {
+      sessionStorage.setItem(sessionKey, "1");
       router.replace("/onboarding");
+      return;
     }
+
+    if (!sessionStorage.getItem(quickIntroKey)) {
+      sessionStorage.setItem(quickIntroKey, "1");
+      sessionStorage.setItem(sessionKey, "1");
+      router.replace("/onboarding?mode=quick");
+      return;
+    }
+
+    sessionStorage.setItem(sessionKey, "1");
   }, [router]);
 
   useEffect(() => {
@@ -186,6 +241,9 @@ function TasksContent() {
 
   const pinnedTasks = useMemo(() => sortTasks(tasks.filter((task) => task.pinned)), [tasks]);
   const unpinnedTasks = useMemo(() => sortTasks(tasks.filter((task) => !task.pinned)), [tasks]);
+  const bestStreak = Math.max(...tasks.map((task) => Number(task?.streak || 0)), 0);
+  const comboMultiplier = getComboMultiplier(bestStreak);
+  const comboUpgrade = getNextComboUpgrade(bestStreak);
 
   const saveTasks = (updatedTasks, onBeforeDispatch) => {
     localStorage.setItem("streakman_tasks", JSON.stringify(updatedTasks));
@@ -258,16 +316,24 @@ function TasksContent() {
 
   const completeTask = (taskId) => {
     let completedNow = false;
+    const currentHour = new Date().getHours();
+    const ledger = readTaskXPLedger();
 
     const updated = tasks.map((task) => {
       if (task.id !== taskId) return task;
 
       if (task.completedToday) {
-        const newStreak = Math.max(0, task.streak - 1);
+        const savedAward = ledger.taskAwards[taskId] || { task: 0, earlyBonus: 0 };
+        if (savedAward.task > 0) addXP(-savedAward.task, "task");
+        if (savedAward.earlyBonus > 0) addXP(-savedAward.earlyBonus, "earlyBonus");
+        delete ledger.taskAwards[taskId];
 
-        const currentXP = parseInt(localStorage.getItem("streakman_xp") || "0", 10);
-        localStorage.setItem("streakman_xp", Math.max(0, currentXP - 40).toString());
-        window.dispatchEvent(new Event("xpUpdated"));
+        if (ledger.allTasksBonus > 0) {
+          addXP(-ledger.allTasksBonus, "allTasks");
+          ledger.allTasksBonus = 0;
+        }
+
+        const newStreak = Math.max(0, task.streak - 1);
 
         const totalCompletions = parseInt(
           localStorage.getItem("streakman_total_completions") || "0",
@@ -295,10 +361,21 @@ function TasksContent() {
       completedNow = true;
       const newStreak = task.streak + 1;
       const newBestStreak = Math.max(newStreak, task.bestStreak);
+      const xpAward = getXPWithMultipliers(XP_REWARDS.TASK_COMPLETE, newStreak);
+      addXP(xpAward.finalAmount, "task");
 
-      const currentXP = parseInt(localStorage.getItem("streakman_xp") || "0", 10);
-      localStorage.setItem("streakman_xp", (currentXP + 40).toString());
-      window.dispatchEvent(new Event("xpUpdated"));
+      let earlyBonusAward = 0;
+      if (currentHour < 12) {
+        earlyBonusAward = getEarlyBonusXP(newStreak);
+        if (earlyBonusAward > 0) {
+          addXP(earlyBonusAward, "earlyBonus");
+        }
+      }
+
+      ledger.taskAwards[taskId] = {
+        task: xpAward.finalAmount,
+        earlyBonus: earlyBonusAward,
+      };
 
       const totalCompletions = parseInt(
         localStorage.getItem("streakman_total_completions") || "0",
@@ -321,6 +398,23 @@ function TasksContent() {
       };
     });
 
+    const completedCountAfter = updated.filter((task) => task.completedToday).length;
+    if (
+      completedNow &&
+      updated.length > 0 &&
+      completedCountAfter === updated.length &&
+      ledger.allTasksBonus === 0
+    ) {
+      const maxStreak = Math.max(...updated.map((task) => Number(task?.streak || 0)), 0);
+      const allTasksBonus = getAllTasksBonusXP(maxStreak);
+      if (allTasksBonus > 0) {
+        addXP(allTasksBonus, "allTasks");
+        ledger.allTasksBonus = allTasksBonus;
+      }
+    }
+
+    writeTaskXPLedger(ledger);
+
     saveTasks(updated, (nextTasks) => {
       if (!completedNow) return;
 
@@ -341,7 +435,7 @@ function TasksContent() {
           !localStorage.getItem("streakman_first_complete");
 
         if (needsCeremony) {
-          addXP(XP_REWARDS.FIRST_EVER_COMPLETION);
+          addXP(XP_REWARDS.FIRST_EVER_COMPLETION, "other");
           localStorage.setItem("streakman_first_complete", "true");
           localStorage.setItem("streakman_onboarded", "true");
           setFirstCompletionTask(firstTask);
@@ -410,8 +504,21 @@ function TasksContent() {
     });
 
     if (!wasCompleted) {
+      const streakAfterComplete = Number(task?.streak || 0) + 1;
+      const xpAward = getXPWithMultipliers(XP_REWARDS.TASK_COMPLETE, streakAfterComplete);
+      const combo = getComboMultiplier(streakAfterComplete);
       const id = `${Date.now()}-${Math.random()}`;
-      setFloatingXP((current) => [...current, { id, x, y, amount: 40, bonus: false }]);
+      setFloatingXP((current) => [
+        ...current,
+        {
+          id,
+          x,
+          y,
+          amount: xpAward.finalAmount,
+          bonus: false,
+          multiplierText: combo > 1 ? `\u{1F525}${combo.toFixed(1)}x` : "",
+        },
+      ]);
     }
 
     completeTask(taskId);
@@ -457,6 +564,22 @@ function TasksContent() {
             <EmptyState />
           ) : (
             <>
+              {bestStreak >= 7 && (
+                <div className="mb-4 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3">
+                  <p className="text-sm font-semibold text-amber-300">
+                    {"\u{1F525}"} {comboMultiplier.toFixed(1)}x Combo Active
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-400">
+                    Day {bestStreak} streak - Complete tasks for {comboMultiplier.toFixed(1)}x XP
+                  </p>
+                  {comboUpgrade && (
+                    <p className="mt-1 text-xs text-teal-300">
+                      Tomorrow: {comboUpgrade.multiplier.toFixed(1)}x Combo {"\u{1F680}"}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <TaskSection
                 title="Pinned"
                 tasks={pinnedTasks}
@@ -812,6 +935,7 @@ function TasksContent() {
           x={item.x}
           y={item.y}
           bonus={item.bonus}
+          multiplierText={item.multiplierText}
           onDone={() =>
             setFloatingXP((current) => current.filter((entry) => entry.id !== item.id))
           }

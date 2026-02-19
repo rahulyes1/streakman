@@ -1,75 +1,34 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
-import IntensitySlider from "@/components/IntensitySlider";
 import { getCurrentSession, getCurrentUser, onAuthStateChange, signInWithGoogle, signOut } from "@/lib/auth";
 import { getSupabaseConfigStatus } from "@/lib/supabaseClient";
 
-const PRESETS = {
-  chill: {
-    surprise: 1,
-    competition: 1,
-    progression: 1,
-    achievement: 1,
-    reminders: 1,
-  },
-  balanced: {
-    surprise: 2,
-    competition: 2,
-    progression: 2,
-    achievement: 2,
-    reminders: 2,
-  },
-  beast: {
-    surprise: 4,
-    competition: 4,
-    progression: 4,
-    achievement: 4,
-    reminders: 4,
-  },
-};
-
-const SLIDER_CONFIGS = [
-  {
-    id: "surprise",
-    label: "Surprise & Randomness",
-    description: "Daily spin, random rewards, mystery challenges",
-  },
-  {
-    id: "competition",
-    label: "Competition",
-    description: "Leaderboards, challenges, streak battles",
-  },
-  {
-    id: "progression",
-    label: "Progression Feedback",
-    description: "XP bars, levels, progress tracking",
-  },
-  {
-    id: "achievement",
-    label: "Achievement Celebrations",
-    description: "Badges, animations, level-up notifications",
-  },
-  {
-    id: "reminders",
-    label: "Reminders & Urgency",
-    description: "Streak warnings, daily notifications, deadlines",
-  },
+const RESET_LOCAL_KEYS = [
+  "streakman_tasks",
+  "streakman_xp",
+  "streakman_freeze_tokens",
+  "streakman_first_use",
+  "streakman_last_active",
+  "streakman_first_complete",
+  "streakman_onboarded",
+  "streakman_username",
+  "streakman_best_ever_streak",
+  "streakman_daily_mission",
+  "streakman_milestones_claimed",
+  "streakman_milestone_xp_claimed",
+  "streakman_forge_last_used",
+  "streakman_city_last_update",
+  "streakman_city_event",
+  "streakman_shield_used",
+  "streakman_total_completions",
+  "streakman_last_spin",
+  "streakman_last_reset_date",
+  "gamificationIntensities",
+  "minimalMode",
 ];
-
-function getInitialIntensities() {
-  if (typeof window === "undefined") return PRESETS.balanced;
-
-  const saved = localStorage.getItem("gamificationIntensities");
-  if (!saved) return PRESETS.balanced;
-
-  try {
-    return JSON.parse(saved);
-  } catch {
-    return PRESETS.balanced;
-  }
-}
 
 function getInitialMinimalMode() {
   if (typeof window === "undefined") return false;
@@ -84,44 +43,17 @@ function getInitialMinimalMode() {
   }
 }
 
-function detectPreset(values) {
-  if (
-    values.surprise === PRESETS.chill.surprise &&
-    values.competition === PRESETS.chill.competition &&
-    values.progression === PRESETS.chill.progression &&
-    values.achievement === PRESETS.chill.achievement &&
-    values.reminders === PRESETS.chill.reminders
-  ) {
-    return "chill";
-  }
-
-  if (
-    values.surprise === PRESETS.balanced.surprise &&
-    values.competition === PRESETS.balanced.competition &&
-    values.progression === PRESETS.balanced.progression &&
-    values.achievement === PRESETS.balanced.achievement &&
-    values.reminders === PRESETS.balanced.reminders
-  ) {
-    return "balanced";
-  }
-
-  if (
-    values.surprise === PRESETS.beast.surprise &&
-    values.competition === PRESETS.beast.competition &&
-    values.progression === PRESETS.beast.progression &&
-    values.achievement === PRESETS.beast.achievement &&
-    values.reminders === PRESETS.beast.reminders
-  ) {
-    return "beast";
-  }
-
-  return null;
+function getInitialUsername() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("streakman_username") || "";
 }
 
 export default function Settings() {
-  const [intensities, setIntensities] = useState(() => getInitialIntensities());
-  const [activePreset, setActivePreset] = useState(() => detectPreset(getInitialIntensities()));
+  const router = useRouter();
   const [minimalMode, setMinimalMode] = useState(() => getInitialMinimalMode());
+  const [displayName, setDisplayName] = useState(() => getInitialUsername());
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
@@ -129,14 +61,15 @@ export default function Settings() {
   const supabaseReady = configStatus.ready;
 
   useEffect(() => {
-    localStorage.setItem("gamificationIntensities", JSON.stringify(intensities));
-    window.dispatchEvent(new Event("settingsUpdated"));
-  }, [intensities]);
-
-  useEffect(() => {
     localStorage.setItem("minimalMode", JSON.stringify(minimalMode));
     window.dispatchEvent(new Event("settingsUpdated"));
   }, [minimalMode]);
+
+  useEffect(() => {
+    if (!profileSaved) return undefined;
+    const timer = window.setTimeout(() => setProfileSaved(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [profileSaved]);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -159,14 +92,39 @@ export default function Settings() {
     return () => subscription.unsubscribe();
   }, []);
 
-  function handleSliderChange(id, value) {
-    setIntensities((current) => ({ ...current, [id]: value }));
-    setActivePreset(null);
+  function saveDisplayName() {
+    const nextName = displayName.trim() || "Explorer";
+    localStorage.setItem("streakman_username", nextName);
+    setDisplayName(nextName);
+    setProfileSaved(true);
+    window.dispatchEvent(new Event("settingsUpdated"));
   }
 
-  function applyPreset(presetName) {
-    setIntensities(PRESETS[presetName]);
-    setActivePreset(presetName);
+  function replayOnboarding() {
+    localStorage.removeItem("streakman_onboarded");
+    sessionStorage.removeItem("streakman_onboarding_checked");
+    sessionStorage.removeItem("streakman_quick_intro_seen");
+    router.push("/onboarding");
+  }
+
+  function resetAllAppData() {
+    const confirmed = window.confirm(
+      "This will permanently remove your local streak data on this device. Continue?"
+    );
+    if (!confirmed) return;
+
+    RESET_LOCAL_KEYS.forEach((key) => localStorage.removeItem(key));
+    sessionStorage.removeItem("streakman_onboarding_checked");
+    sessionStorage.removeItem("streakman_quick_intro_seen");
+
+    window.dispatchEvent(new Event("tasksUpdated"));
+    window.dispatchEvent(new Event("xpUpdated"));
+    window.dispatchEvent(new Event("tokensUpdated"));
+    window.dispatchEvent(new Event("settingsUpdated"));
+
+    setDisplayName("");
+    setShowResetConfirm(false);
+    router.replace("/tasks");
   }
 
   async function handleConnectGoogle() {
@@ -209,54 +167,45 @@ export default function Settings() {
         <div className="relative z-10 mx-auto max-w-4xl">
           <header className="mb-6">
             <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-            <p className="mt-1 text-sm text-zinc-400">Tune your streak system exactly how you like it.</p>
+            <p className="mt-1 text-sm text-zinc-400">Manage your profile, onboarding, and app data.</p>
           </header>
 
           <section className="glass-card mb-6 rounded-3xl p-6" data-active="true">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold">Gamification Intensity</h2>
-              <p className="mt-1 text-sm text-zinc-400">
-                Lower for a calmer experience, or turn it up for stronger prompts and reward feedback.
-              </p>
+            <h2 className="text-xl font-semibold">Profile</h2>
+            <p className="mt-1 text-sm text-zinc-400">Choose how your name appears across your city and progress pages.</p>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+              <input
+                type="text"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                onBlur={saveDisplayName}
+                placeholder="Explorer"
+                className="glass-card h-11 w-full rounded-xl px-3 text-sm outline-none placeholder:text-zinc-500"
+              />
+              <button
+                type="button"
+                onClick={saveDisplayName}
+                className="glass-card min-h-11 rounded-xl px-4 text-sm font-semibold text-teal-200"
+              >
+                Save Name
+              </button>
             </div>
 
-            <div className="mb-6 grid grid-cols-3 gap-3">
-              <PresetButton
-                label="Chill"
-                icon="\u{1F319}"
-                active={activePreset === "chill"}
-                onClick={() => applyPreset("chill")}
-              />
-              <PresetButton
-                label="Balanced"
-                icon="\u2696\uFE0F"
-                active={activePreset === "balanced"}
-                onClick={() => applyPreset("balanced")}
-              />
-              <PresetButton
-                label="Beast"
-                icon="\u{1F525}"
-                active={activePreset === "beast"}
-                onClick={() => applyPreset("beast")}
-              />
-            </div>
+            {profileSaved && <p className="mt-2 text-xs text-emerald-300">Name saved.</p>}
+          </section>
 
-            <div className="space-y-4">
-              {SLIDER_CONFIGS.map((config) => (
-                <div key={config.id}>
-                  <IntensitySlider
-                    label={config.label}
-                    value={intensities[config.id]}
-                    onChange={(value) => handleSliderChange(config.id, value)}
-                  />
-                  <p className="ml-1 mt-1 text-xs text-zinc-500">{config.description}</p>
-                </div>
-              ))}
-            </div>
+          <section className="glass-card mb-6 rounded-3xl p-6">
+            <h2 className="text-xl font-semibold">Onboarding</h2>
+            <p className="mt-1 text-sm text-zinc-400">Replay the full onboarding flow from the start whenever you want.</p>
 
-            <div className="mt-6 text-center">
-              <p className="text-xs text-emerald-300">Settings are saved automatically.</p>
-            </div>
+            <button
+              type="button"
+              onClick={replayOnboarding}
+              className="glass-card mt-4 min-h-11 rounded-xl px-4 text-sm font-semibold text-teal-200"
+            >
+              Replay Full Onboarding
+            </button>
           </section>
 
           <section className="glass-card mb-6 rounded-3xl p-6">
@@ -266,7 +215,7 @@ export default function Settings() {
                 <div className="flex-1">
                   <h3 className="font-semibold">Minimal Mode</h3>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Simplifies the interface by reducing visual game intensity and keeping core task actions in focus.
+                    Simplifies the interface by reducing visual intensity and keeping task actions in focus.
                   </p>
                 </div>
                 <button
@@ -285,6 +234,41 @@ export default function Settings() {
                 </button>
               </div>
             </div>
+          </section>
+
+          <section className="glass-card mb-6 rounded-3xl border border-rose-300/25 p-6">
+            <h2 className="text-xl font-semibold text-rose-300">Danger Zone</h2>
+            <p className="mt-1 text-sm text-zinc-400">Delete all local app data on this device and restart from scratch.</p>
+
+            {!showResetConfirm ? (
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(true)}
+                className="glass-card mt-4 min-h-11 rounded-xl px-4 text-sm font-semibold text-rose-300"
+              >
+                Reset All App Data
+              </button>
+            ) : (
+              <div className="mt-4 rounded-xl border border-rose-300/35 bg-rose-300/10 p-4">
+                <p className="text-sm text-rose-200">This will clear tasks, XP, tokens, onboarding state, and settings.</p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={resetAllAppData}
+                    className="glass-card min-h-11 rounded-xl px-4 text-sm font-semibold text-rose-300"
+                  >
+                    Confirm Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowResetConfirm(false)}
+                    className="glass-card min-h-11 rounded-xl px-4 text-sm font-semibold text-zinc-300"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="grid gap-4 sm:grid-cols-2">
@@ -337,22 +321,5 @@ export default function Settings() {
 
       <BottomNav />
     </>
-  );
-}
-
-function PresetButton({ label, icon, active, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`glass-card min-h-11 rounded-xl px-3 py-2 text-sm font-semibold transition-spring ${
-        active
-          ? "border border-teal-300/45 bg-teal-300/15 text-teal-100"
-          : "text-zinc-300 hover:text-zinc-100"
-      }`}
-    >
-      <span className="emoji-premium emoji-premium-inline emoji-premium-muted mr-1">{icon}</span>
-      {label}
-    </button>
   );
 }

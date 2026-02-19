@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-export default function FloatingXP({ amount, x, y, bonus = false, onDone }) {
+export default function FloatingXP({ amount, x, y, bonus = false, multiplierText = "", onDone }) {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       onDone?.();
@@ -21,7 +21,9 @@ export default function FloatingXP({ amount, x, y, bonus = false, onDone }) {
       aria-live="polite"
     >
       {bonus && <span className="mr-1 text-xs tracking-wide text-teal-200">BONUS</span>}
-      <span>{label}</span>
+      <span>
+        {label} {multiplierText}
+      </span>
     </div>
   );
 }

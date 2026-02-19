@@ -9,11 +9,17 @@ import DailyMissionCard from "@/components/DailyMissionCard";
 import MilestoneCelebration from "@/components/MilestoneCelebration";
 import ProgressBar from "@/components/ProgressBar";
 import StreakShieldCard from "@/components/StreakShieldCard";
+import XPGuide from "@/components/XPGuide";
 import { initializeDailyReset } from "@/lib/dailyReset";
 import { streakMilestone } from "@/lib/haptics";
 import { checkMilestones } from "@/lib/milestones";
 import { calculateScore } from "@/lib/scoring";
-import { getLevelFromXP } from "@/lib/xpSystem";
+import {
+  LEVEL_THRESHOLDS,
+  getComboMultiplier,
+  getLevelFromXP,
+  getTimeOfDayMultiplier,
+} from "@/lib/xpSystem";
 
 const STATUS_CONFIG = {
   exceptional: { emoji: "\u{1F525}", cellClass: "bg-amber-300/65 text-amber-950", label: "Exceptional" },
@@ -83,6 +89,7 @@ function getCurrentStreak(tasks) {
 export default function ProgressPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [hoveredDay, setHoveredDay] = useState(null);
+  const [showXPGuide, setShowXPGuide] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [totalXP, setTotalXP] = useState(0);
   const [freezeTokens, setFreezeTokens] = useState(0);
@@ -182,6 +189,12 @@ export default function ProgressPage() {
   const currentStreak = Math.max(...tasks.map((task) => task.streak || 0), 0);
   const bestStreak = Math.max(...tasks.map((task) => task.bestStreak || 0), 0);
   const ghostGap = Math.max(0, bestEverStreak - currentStreak);
+  const comboMultiplier = getComboMultiplier(currentStreak);
+  const timeMultiplier = getTimeOfDayMultiplier();
+  const nextLevelThreshold =
+    levelInfo.next != null
+      ? LEVEL_THRESHOLDS.find((entry) => entry.level === levelInfo.next)?.min || levelInfo.current
+      : levelInfo.current;
   const weatherEmoji = getWeatherEmoji(scoreData.totalScore);
   const greeting = getGreeting();
   const hour = new Date().getHours();
@@ -198,6 +211,7 @@ export default function ProgressPage() {
     { id: "stats", label: "Stats" },
     { id: "forge", label: "Forge" },
     { id: "badges", label: "Badges" },
+    { id: "guide", label: "Guide" },
   ];
 
   const momentumData = useMemo(() => {
@@ -299,9 +313,46 @@ export default function ProgressPage() {
                 style={{ width: `${levelInfo.percentage}%` }}
               />
             </div>
-            <p className="mt-2 text-xs text-zinc-400">
-              {levelInfo.next ? `${levelInfo.xpToNext} XP to Level ${levelInfo.next}` : "Max level reached"}
+            <div className="mt-2 flex items-center gap-2">
+              <p className="text-xs text-zinc-400">
+                {levelInfo.next ? `${levelInfo.xpToNext} XP to Level ${levelInfo.next}` : "Max level reached"}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowXPGuide(true)}
+                className="flex h-4 w-4 items-center justify-center rounded-full border border-white/[0.15] text-xs text-zinc-400 transition-spring hover:border-teal-300/40 hover:text-teal-200"
+                aria-label="Open XP guide"
+              >
+                ?
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-zinc-500">
+              {levelInfo.current} / {nextLevelThreshold} XP
             </p>
+            {(comboMultiplier > 1 || timeMultiplier.multiplier !== 1) && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {comboMultiplier > 1 && (
+                  <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-1 text-xs font-semibold text-amber-300">
+                    {"\u{1F525}"} {comboMultiplier.toFixed(1)}x Combo
+                  </span>
+                )}
+                {timeMultiplier.multiplier === 1.5 && (
+                  <span className="rounded-full border border-teal-300/30 bg-teal-300/10 px-2 py-1 text-xs font-semibold text-teal-300">
+                    {"\u{1F305}"} +50% XP
+                  </span>
+                )}
+                {timeMultiplier.multiplier === 1.2 && (
+                  <span className="rounded-full border border-teal-300/30 bg-teal-300/10 px-2 py-1 text-xs font-semibold text-teal-300">
+                    {"\u2600\uFE0F"} +20% XP
+                  </span>
+                )}
+                {timeMultiplier.multiplier === 0.9 && (
+                  <span className="rounded-full border border-zinc-600 bg-zinc-800 px-2 py-1 text-xs font-semibold text-zinc-400">
+                    {"\u{1F319}"} -10% XP
+                  </span>
+                )}
+              </div>
+            )}
           </section>
 
           <section className="mb-5 grid grid-cols-3 gap-3">
@@ -499,6 +550,12 @@ export default function ProgressPage() {
             )}
 
             {activeTab === "badges" && <BadgeDisplay compact={false} />}
+
+            {activeTab === "guide" && (
+              <div className="max-h-[56vh] overflow-y-auto pr-1">
+                <XPGuide inline={true} currentLevel={levelInfo.level} tasks={tasks} />
+              </div>
+            )}
           </section>
         </div>
       </div>
@@ -511,6 +568,13 @@ export default function ProgressPage() {
           onClose={() => setMilestoneToCelebrate(checkMilestones(tasks))}
         />
       )}
+
+      <XPGuide
+        isOpen={showXPGuide}
+        onClose={() => setShowXPGuide(false)}
+        currentLevel={levelInfo.level}
+        tasks={tasks}
+      />
     </>
   );
 }

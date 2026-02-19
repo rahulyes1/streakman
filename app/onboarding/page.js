@@ -39,16 +39,38 @@ export default function OnboardingPage() {
   const [screen, setScreen] = useState(1);
   const [name, setName] = useState("");
   const router = useRouter();
+  const [quickMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const params = new URLSearchParams(window.location.search);
+    const quickQueryMode = params.get("mode") === "quick";
+    if (quickQueryMode) return true;
+
+    return Boolean(localStorage.getItem("streakman_onboarded")) && document.referrer.includes("/tasks");
+  });
   const population = useTicker(847, 3000, screen === 1);
 
   useEffect(() => {
-    if (screen !== 1) return undefined;
+    if (screen !== 1 || quickMode) return undefined;
     const timer = window.setTimeout(() => setScreen(2), 4000);
     return () => window.clearTimeout(timer);
-  }, [screen]);
+  }, [screen, quickMode]);
+
+  const markOnboardingSession = () => {
+    sessionStorage.setItem("streakman_onboarding_checked", "1");
+    if (quickMode) {
+      sessionStorage.setItem("streakman_quick_intro_seen", "1");
+    }
+  };
 
   const goToTasks = () => {
-    sessionStorage.setItem("streakman_onboarding_checked", "1");
+    markOnboardingSession();
+    router.push("/tasks");
+  };
+
+  const handleSkip = (event) => {
+    event.stopPropagation();
+    localStorage.setItem("streakman_onboarded", "true");
+    markOnboardingSession();
     router.push("/tasks");
   };
 
@@ -60,16 +82,16 @@ export default function OnboardingPage() {
       {screen === 1 && (
         <div
           className="relative z-10 flex min-h-screen w-full flex-col items-center justify-center px-6 text-center"
-          onClick={() => setScreen(2)}
+          onClick={() => {
+            if (!quickMode) {
+              setScreen(2);
+            }
+          }}
         >
           <button
             type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              localStorage.setItem("streakman_onboarded", "true");
-              goToTasks();
-            }}
-            className="absolute right-4 top-4 text-sm text-zinc-400 underline"
+            onClick={handleSkip}
+            className="glass-card absolute right-4 top-1/2 min-h-11 -translate-y-1/2 rounded-xl px-4 text-sm font-semibold text-zinc-300"
           >
             Skip
           </button>
@@ -90,13 +112,27 @@ export default function OnboardingPage() {
           <p className="mb-5 text-4xl font-bold text-teal-300">{population}</p>
           <h1 className="text-3xl font-bold tracking-tight">Your habits. Built into a city.</h1>
           <p className="mt-2 text-sm text-zinc-400">Every streak becomes a building.</p>
-          <span className="mt-8 animate-slideUp rounded-full bg-teal-300/15 px-5 py-2 text-sm font-semibold text-teal-200 [animation-delay:1s]">
-            Begin
-          </span>
+
+          {quickMode ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                goToTasks();
+              }}
+              className="glass-card mt-8 min-h-11 rounded-xl bg-teal-300/15 px-5 py-2 text-sm font-semibold text-teal-200"
+            >
+              Continue to Tasks
+            </button>
+          ) : (
+            <span className="mt-8 animate-slideUp rounded-full bg-teal-300/15 px-5 py-2 text-sm font-semibold text-teal-200 [animation-delay:1s]">
+              Begin
+            </span>
+          )}
         </div>
       )}
 
-      {screen === 2 && (
+      {!quickMode && screen === 2 && (
         <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-md items-center px-6">
           <div className="glass-card w-full rounded-3xl p-6" data-active="true">
             <h2 className="text-2xl font-bold">What should we call you?</h2>
@@ -123,7 +159,7 @@ export default function OnboardingPage() {
         </div>
       )}
 
-      {screen === 3 && (
+      {!quickMode && screen === 3 && (
         <div className="relative z-10 mx-auto max-w-4xl px-4 pb-12 pt-8 animate-fadeIn">
           <h2 className="text-3xl font-bold">Your city is empty.</h2>
           <p className="mt-2 text-sm text-zinc-300">

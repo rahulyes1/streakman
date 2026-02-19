@@ -104,8 +104,7 @@ export default function DailyForge() {
     setReward(result);
 
     if (result.xp > 0) {
-      addXP(result.xp);
-      window.dispatchEvent(new Event("xpUpdated"));
+      addXP(result.xp, "forge");
       setFloatXp({
         id: `${Date.now()}-${Math.random()}`,
         amount: result.xp,
